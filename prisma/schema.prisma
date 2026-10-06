@@ -1,0 +1,516 @@
+// ETW — Eye The Wealth | Prisma Schema
+// SQLite for local dev — all types chosen to be PostgreSQL-compatible.
+// To migrate to PostgreSQL: change provider to "postgresql" and DATABASE_URL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMERATIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// SQLite does not support native enums — we use String with validation in code.
+// For PostgreSQL migration, replace String with enum types below.
+
+// Role: "ADMIN" | "EDITOR" | "VIEWER"
+// VerificationStatus: "VERIFIED" | "UNVERIFIED" | "ESTIMATED" | "NOT_DISCLOSED" | "SAMPLE"
+// EmergencyNgoStatus: "CONFIRMED_RESPONDING" | "OPERATING_NEARBY"
+// DisasterType: "FLOOD" | "EARTHQUAKE" | "CYCLONE" | "LANDSLIDE" | "FIRE" | "DROUGHT" | "OTHER"
+// CaseStatus: "DOCUMENTED" | "REPORTED_MEDIA" | "ILLUSTRATIVE"
+// EntityType: "PERSON" | "COMPANY" | "TRUST" | "FOUNDATION" | "NGO" | "PROJECT" | "REGION" | "UNKNOWN"
+// AuditAction: "CREATE" | "UPDATE" | "DELETE"
+// SourceClassification: "OFFICIAL_GOVT" | "PUBLIC_FILING" | "NGO_ANNUAL_REPORT" | "CSR_DISCLOSURE" | "FCRA_DISCLOSURE" | "AUDITED_STATEMENT" | "NGO_WEBSITE" | "VERIFIED_PUBLIC"
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROVER MODULE
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Country {
+  id          String      @id @default(cuid())
+  code        String      @unique // ISO 3166-1 alpha-3, e.g. "IND"
+  code2       String      @unique // ISO 3166-1 alpha-2, e.g. "IN"
+  name        String
+  region      String?
+  incomeLevel String?
+  capitalCity String?
+  longitude   Float?
+  latitude    Float?
+  flagEmoji   String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  dataPoints  DataPoint[]
+  comparisons CompareSelection[]
+
+  @@index([code])
+  @@index([name])
+}
+
+model Category {
+  id          String      @id @default(cuid())
+  name        String      @unique // "Wealth", "GDP", "Poverty", etc.
+  slug        String      @unique
+  description String?
+  displayOrder Int        @default(0)
+  createdAt   DateTime    @default(now())
+
+  indicators  Indicator[]
+}
+
+model Indicator {
+  id              String           @id @default(cuid())
+  name            String
+  slug            String           @unique
+  categoryId      String
+  category        Category         @relation(fields: [categoryId], references: [id])
+  definition      String           // What this indicator measures
+  methodology     String?          // How it is calculated
+  unit            String           // e.g. "% of GDP", "USD", "per 1,000 live births"
+  worldBankCode   String?          // e.g. "NY.GDP.MKTP.CD"
+  imfCode         String?
+  whoCode         String?
+  oecdCode        String?
+  isWealth        Boolean          @default(false) // Wealth indicators need manual data
+  displayOrder    Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  dataPoints      DataPoint[]
+  interpretations EtwInterpretation[]
+  compareSelections CompareSelection[]
+
+  @@index([categoryId])
+  @@index([slug])
+}
+
+model DataPoint {
+  id               String   @id @default(cuid())
+  indicatorId      String
+  indicator        Indicator @relation(fields: [indicatorId], references: [id])
+  countryId        String
+  country          Country   @relation(fields: [countryId], references: [id])
+  value            Float?    // null = "Not publicly disclosed"
+  unit             String?
+  year             Int
+  sourceId         String?
+  source           Source?   @relation(fields: [sourceId], references: [id])
+  sourceUrl        String?
+  collectionDate   DateTime?
+  // VerificationStatus: VERIFIED | UNVERIFIED | ESTIMATED | NOT_DISCLOSED | SAMPLE
+  verificationStatus String  @default("UNVERIFIED")
+  isSampleData     Boolean   @default(false)
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([indicatorId, countryId, year, sourceId])
+  @@index([countryId])
+  @@index([indicatorId])
+  @@index([year])
+  @@index([verificationStatus])
+}
+
+model Source {
+  id           String      @id @default(cuid())
+  name         String      @unique // "World Bank", "IMF", "WHO", etc.
+  shortName    String?
+  url          String
+  description  String?
+  isOfficial   Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+
+  dataPoints   DataPoint[]
+  transactions Transaction[]
+  ngoFinancials NgoFinancialYear[]
+}
+
+model EtwInterpretation {
+  id           String    @id @default(cuid())
+  indicatorId  String
+  indicator    Indicator @relation(fields: [indicatorId], references: [id])
+  text         String    // The ETW analysis text
+  factors      String?   // JSON array of factors as text
+  lastReviewed DateTime  @default(now())
+  reviewedBy   String?   // Editor user id
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([indicatorId])
+}
+
+model CompareSelection {
+  id          String    @id @default(cuid())
+  sessionId   String?   // anonymous session tracking (optional)
+  indicatorId String
+  indicator   Indicator @relation(fields: [indicatorId], references: [id])
+  countryId   String
+  country     Country   @relation(fields: [countryId], references: [id])
+  createdAt   DateTime  @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTRIBUTOR MODULE — NGOs
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Ngo {
+  id                 String             @id @default(cuid())
+  name               String
+  slug               String             @unique
+  registrationNumber String?
+  registrationType   String?            // "Trust" | "Society" | "Section 8" | "NGO Darpan" etc.
+  registrationDate   DateTime?
+  // District: one of 36 Maharashtra districts
+  district           String?
+  address            String?
+  city               String?
+  state              String             @default("Maharashtra")
+  pincode            String?
+  website            String?
+  publicEmail        String?
+  publicPhone        String?
+  // Category (comma-separated slugs or JSON)
+  categories         String?            // JSON array stored as string
+  areasOfWork        String?            // JSON array
+  // Directors/Trustees (public records only)
+  directorsPublic    String?            // JSON array
+  // Source info
+  ngoId              String?            // NITI Aayog Unique ID
+  fcraRegistration   String?
+  panNumber          String?
+  // Status
+  isActive           Boolean            @default(true)
+  isSampleData       Boolean            @default(true)
+  verificationStatus String             @default("UNVERIFIED")
+  sourceUrl          String?
+  lastVerified       DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  financialYears     NgoFinancialYear[]
+  transactions       Transaction[]
+  emergencyMatches   EmergencyNgoMatch[]
+
+  @@index([district])
+  @@index([registrationNumber])
+  @@index([slug])
+}
+
+model NgoFinancialYear {
+  id                   String   @id @default(cuid())
+  ngoId                String
+  ngo                  Ngo      @relation(fields: [ngoId], references: [id])
+  financialYear        String   // e.g. "2022-23"
+  totalIncome          Float?
+  totalExpenditure     Float?
+  donations            Float?
+  grants               Float?
+  csrFunding           Float?
+  governmentFunding    Float?
+  foreignContributions Float?   // FCRA
+  totalAssets          Float?
+  totalLiabilities     Float?
+  adminExpenditure     Float?
+  programExpenditure   Float?
+  // Source classification: see enum comment above
+  sourceClassification String?
+  sourceId             String?
+  source               Source?  @relation(fields: [sourceId], references: [id])
+  sourceUrl            String?
+  documentUrl          String?  // Link to actual filing
+  verificationStatus   String   @default("UNVERIFIED")
+  isSampleData         Boolean  @default(true)
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([ngoId])
+  @@index([financialYear])
+}
+
+model Transaction {
+  id                   String          @id @default(cuid())
+  ngoId                String
+  ngo                  Ngo             @relation(fields: [ngoId], references: [id])
+  date                 DateTime?
+  financialYear        String?
+  senderName           String?
+  senderType           String?         // "Government" | "Corporate" | "Individual" | "Foreign" | "NGO"
+  recipientName        String?
+  recipientType        String?
+  amount               Float?
+  currency             String          @default("INR")
+  purpose              String?
+  transactionType      String?         // "Grant" | "Donation" | "CSR" | "FCRA" | "Government"
+  sourceClassification String?
+  sourceId             String?
+  source               Source?         @relation(fields: [sourceId], references: [id])
+  sourceUrl            String?
+  evidenceDocumentId   String?
+  evidenceDocument     EvidenceDocument? @relation(fields: [evidenceDocumentId], references: [id])
+  verificationStatus   String          @default("UNVERIFIED")
+  isSampleData         Boolean         @default(true)
+  notes                String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  @@index([ngoId])
+  @@index([financialYear])
+  @@index([verificationStatus])
+}
+
+model EvidenceDocument {
+  id            String        @id @default(cuid())
+  title         String
+  documentType  String?       // "Annual Report" | "FCRA Return" | "CSR Filing" | "Court Order" | etc.
+  url           String
+  sourceOrg     String?
+  publishedDate DateTime?
+  retrievedDate DateTime?
+  isSampleData  Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+
+  transactions  Transaction[]
+  emergencyMatches EmergencyNgoMatch[]
+  caseEvidence  CaseEvidence[]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EMERGENCY MODULE
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Emergency {
+  id             String             @id @default(cuid())
+  title          String             // e.g. "Flood — Kolhapur District"
+  // DisasterType: FLOOD | EARTHQUAKE | CYCLONE | LANDSLIDE | FIRE | DROUGHT | OTHER
+  disasterType   String
+  affectedDistricts String          // JSON array of district names
+  severity       String?            // "Low" | "Moderate" | "Severe" | "Extreme"
+  description    String?
+  reportedAt     DateTime
+  resolvedAt     DateTime?
+  isActive       Boolean            @default(true)
+  isSimulation   Boolean            @default(false) // Admin demo flag
+  sourceName     String
+  sourceUrl      String
+  rawAlertData   String?            // JSON of the original alert
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  createdBy      String?            // User id
+
+  ngoMatches     EmergencyNgoMatch[]
+
+  @@index([isActive])
+  @@index([disasterType])
+}
+
+model EmergencyNgoMatch {
+  id              String     @id @default(cuid())
+  emergencyId     String
+  emergency       Emergency  @relation(fields: [emergencyId], references: [id])
+  ngoId           String
+  ngo             Ngo        @relation(fields: [ngoId], references: [id])
+  // Status: CONFIRMED_RESPONDING | OPERATING_NEARBY
+  // CONFIRMED_RESPONDING requires evidenceDocumentId to be set
+  status          String     @default("OPERATING_NEARBY")
+  matchReason     String?    // "district" | "neighbouring" | "relief_specialization" | "area_of_operation"
+  evidenceDocumentId String?
+  evidenceDocument  EvidenceDocument? @relation(fields: [evidenceDocumentId], references: [id])
+  evidenceUrl     String?
+  evidenceDate    DateTime?
+  addedBy         String?    // User id
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@unique([emergencyId, ngoId])
+  @@index([emergencyId])
+  @@index([ngoId])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DE BASEMENT MODULE
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Entity {
+  id          String               @id @default(cuid())
+  name        String
+  slug        String               @unique
+  // EntityType: PERSON | COMPANY | TRUST | FOUNDATION | NGO | PROJECT | REGION | UNKNOWN
+  type        String
+  location    String?
+  jurisdiction String?
+  description String?
+  isPubliclyKnown Boolean         @default(false)
+  isSampleData    Boolean         @default(true)
+  sourceUrl   String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  fromRelationships EntityRelationship[] @relation("FromEntity")
+  toRelationships   EntityRelationship[] @relation("ToEntity")
+}
+
+model EntityRelationship {
+  id                String   @id @default(cuid())
+  fromEntityId      String
+  fromEntity        Entity   @relation("FromEntity", fields: [fromEntityId], references: [id])
+  toEntityId        String
+  toEntity          Entity   @relation("ToEntity", fields: [toEntityId], references: [id])
+  relationshipType  String   // "Investment" | "Donation" | "Loan" | "Ownership" | "Director" | etc.
+  amount            Float?
+  currency          String?  @default("INR")
+  year              Int?
+  description       String?
+  isVerified        Boolean  @default(false) // true = solid edge, false = dashed edge
+  isGap             Boolean  @default(false) // true = "Not publicly traceable" node
+  sourceUrl         String?
+  evidenceNote      String?
+  caseId            String?
+  case              Case?    @relation(fields: [caseId], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([fromEntityId])
+  @@index([toEntityId])
+  @@index([caseId])
+}
+
+model Case {
+  id                   String               @id @default(cuid())
+  slug                 String               @unique
+  title                String
+  subtitle             String?
+  // CaseStatus: DOCUMENTED | REPORTED_MEDIA | ILLUSTRATIVE
+  status               String               @default("ILLUSTRATIVE")
+  legalMechanism       String?              // e.g. "Cross-border holding company structure"
+  transparencyGap      String?              // Structural explanation
+  whatIsKnown          String?              // JSON array of strings
+  whatCannotBeEstablished String?           // JSON array of strings
+  educationalDisclaimer String?
+  isSampleData         Boolean              @default(true)
+  publishedAt          DateTime?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  createdBy            String?
+
+  evidenceChain        CaseEvidence[]
+  entityRelationships  EntityRelationship[]
+}
+
+model CaseEvidence {
+  id                 String           @id @default(cuid())
+  caseId             String
+  case               Case             @relation(fields: [caseId], references: [id])
+  entityName         String?
+  transactionDesc    String?
+  documentTitle      String?
+  sourceName         String?
+  sourceUrl          String?
+  evidenceDate       DateTime?
+  evidenceDocumentId String?
+  evidenceDocument   EvidenceDocument? @relation(fields: [evidenceDocumentId], references: [id])
+  displayOrder       Int              @default(0)
+  createdAt          DateTime         @default(now())
+
+  @@index([caseId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTHENTICATION & AUDIT
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  // Role: ADMIN | EDITOR | VIEWER
+  role          String    @default("VIEWER")
+  passwordHash  String?   // bcrypt hash, null for OAuth users
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions      Session[]
+  accounts      Account[]
+  auditLogs     AuditLog[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String   // AuditAction: CREATE | UPDATE | DELETE
+  entityType String   // "Ngo" | "Transaction" | "Case" | "Emergency" | "User" | etc.
+  entityId   String
+  changes    String?  // JSON diff of what changed
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([createdAt])
+}
+
+model IngestionRun {
+  id           String   @id @default(cuid())
+  source       String   // "WorldBank" | "GDACS" | "ReliefWeb" | etc.
+  startedAt    DateTime @default(now())
+  completedAt  DateTime?
+  status       String   @default("RUNNING") // "RUNNING" | "SUCCESS" | "FAILED" | "PARTIAL"
+  recordsAdded Int      @default(0)
+  recordsUpdated Int    @default(0)
+  recordsSkipped Int    @default(0)
+  errors       String?  // JSON array of error messages
+  notes        String?
+
+  @@index([source])
+  @@index([status])
+  @@index([startedAt])
+}

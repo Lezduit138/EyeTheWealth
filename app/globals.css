@@ -1,0 +1,512 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ETW Design System — Strict Black/White Theme
+   "Financial research platform + investigative database + data journalism"
+   NO gradients, NO color, NO glassmorphism, NO heavy animations
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Color palette — black/white/grey ONLY */
+  --color-bg: #ffffff;
+  --color-text-primary: #000000;
+  --color-text-secondary: #4a4a4a;
+  --color-text-muted: #767676;
+  --color-text-disabled: #aaaaaa;
+
+  /* Borders */
+  --color-border: #d1d1d1;
+  --color-border-strong: #888888;
+  --color-border-black: #000000;
+
+  /* Surfaces */
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f5f5f5;
+  --color-surface-dark: #000000;
+  --color-text-on-dark: #ffffff;
+
+  /* Chart palette — greys and patterns only */
+  --chart-1: #000000;
+  --chart-2: #444444;
+  --chart-3: #888888;
+  --chart-4: #bbbbbb;
+  --chart-5: #dddddd;
+
+  /* Spacing & radius */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  /* ETW uses square corners — no border radius */
+
+  /* Typography */
+  --font-sans: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "Courier New", Courier, monospace;
+}
+
+@theme inline {
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-text-primary);
+  --font-sans: var(--font-sans);
+}
+
+/* ─── Reset & Base ─────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ─── Typography Scale ─────────────────────────────────────────────────────── */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+h1 { font-size: clamp(2rem, 5vw, 4rem); }
+h2 { font-size: clamp(1.5rem, 3vw, 2.5rem); }
+h3 { font-size: clamp(1.25rem, 2.5vw, 1.75rem); }
+h4 { font-size: 1.25rem; font-weight: 600; }
+h5 { font-size: 1rem; font-weight: 600; }
+h6 { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+
+p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+a {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: opacity 0.15s ease;
+}
+
+a:hover {
+  opacity: 0.6;
+}
+
+/* ─── ETW Custom Utility Classes ───────────────────────────────────────────── */
+
+/* Label / micro text */
+.etw-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* Section heading with left bar */
+.etw-section-heading {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border-left: 3px solid var(--color-text-primary);
+  padding-left: 0.75rem;
+}
+
+/* Data value — large numeric display */
+.etw-data-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.etw-data-value-sm {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Card — bordered, no shadow */
+.etw-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: 1.5rem;
+  transition: border-color 0.15s ease;
+}
+
+.etw-card:hover {
+  border-color: var(--color-text-primary);
+}
+
+.etw-card-dark {
+  background: var(--color-surface-dark);
+  color: var(--color-text-on-dark);
+  border: 1px solid #333;
+  padding: 1.5rem;
+}
+
+/* Interactive module card (landing page) */
+.etw-module-card {
+  border: 2px solid var(--color-border-black);
+  padding: 2rem;
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.etw-module-card:hover {
+  background: var(--color-text-primary);
+  color: var(--color-text-on-dark);
+}
+
+.etw-module-card:hover * {
+  color: var(--color-text-on-dark) !important;
+}
+
+/* Status / verification badge */
+.etw-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.etw-badge-official {
+  color: #000;
+  border-color: #000;
+  background: transparent;
+}
+
+.etw-badge-estimated {
+  color: #555;
+  border-color: #999;
+  background: #f0f0f0;
+}
+
+.etw-badge-not-disclosed {
+  color: #888;
+  border-color: #ccc;
+  background: transparent;
+  font-style: italic;
+}
+
+.etw-badge-verified {
+  color: #000;
+  border-color: #000;
+  background: #000;
+  color: #fff;
+}
+
+.etw-badge-unverified {
+  color: #888;
+  border-color: #ccc;
+  background: transparent;
+}
+
+.etw-badge-sample {
+  color: #555;
+  border-color: #888;
+  border-style: dashed;
+  background: #f8f8f8;
+}
+
+/* SAMPLE DATA warning banner */
+.etw-sample-banner {
+  background: repeating-linear-gradient(
+    -45deg,
+    #f8f8f8,
+    #f8f8f8 10px,
+    #ffffff 10px,
+    #ffffff 20px
+  );
+  border: 2px dashed #888;
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #555;
+  text-align: center;
+}
+
+/* ETW Analysis panel — visually separate from official data */
+.etw-analysis-panel {
+  border-left: 4px solid #000;
+  background: #f5f5f5;
+  padding: 1.25rem 1.5rem;
+  margin: 0;
+}
+
+/* Source panel / expandable detail */
+.etw-source-panel {
+  border: 1px solid var(--color-border);
+  background: #fafafa;
+}
+
+.etw-source-panel-trigger {
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+
+.etw-source-panel-content {
+  padding: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+/* Emergency alert banner — black/white, no red */
+.etw-emergency-banner {
+  background: #000;
+  color: #fff;
+  border-bottom: 4px solid #444;
+  padding: 1rem 1.5rem;
+}
+
+/* Data table */
+.etw-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.etw-table th {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border-bottom: 2px solid var(--color-text-primary);
+  padding: 0.5rem 1rem;
+  text-align: left;
+}
+
+.etw-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  vertical-align: top;
+}
+
+.etw-table tr:last-child td {
+  border-bottom: none;
+}
+
+.etw-table tr:hover td {
+  background: var(--color-surface-subtle);
+}
+
+/* Separator */
+.etw-divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 0;
+}
+
+.etw-divider-strong {
+  border: none;
+  border-top: 2px solid var(--color-text-primary);
+  margin: 0;
+}
+
+/* Button styles */
+.etw-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.625rem 1.25rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  text-decoration: none;
+  border: 2px solid var(--color-text-primary);
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+.etw-btn:hover {
+  background: var(--color-text-primary);
+  color: var(--color-text-on-dark);
+}
+
+.etw-btn-filled {
+  background: var(--color-text-primary);
+  color: var(--color-text-on-dark);
+  border: 2px solid var(--color-text-primary);
+}
+
+.etw-btn-filled:hover {
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+.etw-btn-ghost {
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.etw-btn-ghost:hover {
+  border-color: var(--color-text-primary);
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+/* Input styles */
+.etw-input {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  padding: 0.625rem 1rem;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.etw-input:focus {
+  border-color: var(--color-text-primary);
+  border-width: 2px;
+}
+
+.etw-input::placeholder {
+  color: var(--color-text-disabled);
+}
+
+/* Sparkline container */
+.etw-sparkline {
+  width: 80px;
+  height: 30px;
+  display: inline-block;
+}
+
+/* Not-disclosed value placeholder */
+.etw-not-disclosed {
+  color: var(--color-text-disabled);
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
+/* ─── Layout helpers ───────────────────────────────────────────────────────── */
+
+.etw-container {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.etw-page {
+  min-height: calc(100vh - 64px - 120px);
+  padding-top: 3rem;
+  padding-bottom: 4rem;
+}
+
+/* ─── Accessibility ────────────────────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 3px solid #000;
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  padding: 0.5rem 1rem;
+  background: #000;
+  color: #fff;
+  font-weight: 700;
+  z-index: 9999;
+  transition: top 0.1s;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* ─── Responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .etw-container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .etw-data-value {
+    font-size: 2rem;
+  }
+}
+
+/* ─── Print ────────────────────────────────────────────────────────────────── */
+
+@media print {
+  .etw-badge-sample::before {
+    content: "[SAMPLE DATA — NOT REAL] ";
+    font-weight: 900;
+  }
+}
