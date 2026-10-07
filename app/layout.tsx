@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
@@ -28,18 +31,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+import { auth } from "@/auth";
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth();
+  
   return (
-    <html lang="en">
+    <html lang="en" className={inter.className}>
       <body>
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
-        <Header />
+        <Header session={session} />
         <main id="main-content" tabIndex={-1}>
           {children}
         </main>

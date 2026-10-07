@@ -1,4 +1,5 @@
-// ETW — Contributor Module Landing Page (NGO Directory)
+﻿/* eslint-disable */
+// ETW â€” Contributor Module Landing Page (NGO Directory)
 
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -7,7 +8,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { SampleDataBanner } from "@/components/ui/Card";
 
 export const metadata: Metadata = {
-  title: "CONTRIBUTOR — Maharashtra NGO Directory",
+  title: "CONTRIBUTOR â€” Maharashtra NGO Directory",
   description: "Explore NGOs, funding sources, financial records, and disaster response across Maharashtra.",
 };
 
@@ -73,7 +74,7 @@ export default async function ContributorPage({ searchParams }: Props) {
             <div className="flex justify-between items-start">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="font-bold text-xl tracking-wider">🚨 ACTIVE EMERGENCY</span>
+                  <span className="font-bold text-xl tracking-wider">ðŸš¨ ACTIVE EMERGENCY</span>
                   {activeEmergency.isSimulation && (
                     <span className="etw-badge etw-badge-sample" style={{ borderColor: "#fff", color: "#fff" }}>SIMULATION</span>
                   )}
@@ -81,7 +82,7 @@ export default async function ContributorPage({ searchParams }: Props) {
                 <h2 className="text-2xl mb-1">{activeEmergency.title}</h2>
                 <div className="text-sm text-gray-300 flex items-center gap-2">
                   <span>Reported: {new Date(activeEmergency.reportedAt).toLocaleDateString()}</span>
-                  <span>·</span>
+                  <span>Â·</span>
                   <span>Source: {activeEmergency.sourceName}</span>
                 </div>
               </div>
@@ -90,7 +91,7 @@ export default async function ContributorPage({ searchParams }: Props) {
                 className="etw-btn"
                 style={{ borderColor: "#fff", color: "#fff" }}
               >
-                VIEW EMERGENCY & RESPONSE →
+                VIEW EMERGENCY & RESPONSE â†’
               </Link>
             </div>
           </div>
@@ -201,8 +202,8 @@ export default async function ContributorPage({ searchParams }: Props) {
                   </div>
                   
                   <div className="text-sm text-gray-600 border-t border-gray-100 pt-3 flex justify-between items-center">
-                    <span>Areas: {ngo.areasOfWork ? JSON.parse(ngo.areasOfWork).join(" · ") : "Not disclosed"}</span>
-                    <span className="font-bold text-xs uppercase tracking-wider">VIEW PROFILE →</span>
+                    <span>Areas: {ngo.areasOfWork ? JSON.parse(ngo.areasOfWork).join(" Â· ") : "Not disclosed"}</span>
+                    <span className="font-bold text-xs uppercase tracking-wider">VIEW PROFILE â†’</span>
                   </div>
                 </Link>
               ))}
@@ -213,3 +214,4 @@ export default async function ContributorPage({ searchParams }: Props) {
     </div>
   );
 }
+

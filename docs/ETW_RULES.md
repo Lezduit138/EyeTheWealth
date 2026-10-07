@@ -1,0 +1,9 @@
+- Windows/PowerShell-compatible commands; cross-platform npm scripts.
+- Theme: strict black/white (#FFF bg, #000 text, greys, black sections), Inter, no gradients/color/glass/3D/heavy shadows/decor. ONLY exception: Rover's data heat-map layer + its legend.
+- Source-first: every data point has value, unit, source, sourceUrl, year/date, definition, status. Missing = "Not publicly disclosed". Estimates = "Estimated". ETW analysis always labelled "ETW INTERPRETATION — not an official statistic". Never present inference as fact.
+- Never fabricate real-world data. Non-verified seed data must be fictional and visibly labelled "SAMPLE DATA – NOT REAL".
+- Secrets only in env; keep .env.example current; never print secrets.
+- Backend: versioned REST /api/v1, Zod validation, consistent error format, rate limiting on public endpoints, caching, structured logs, AuditLog on every staff write (who/what/when/before-after), IngestionRun logs.
+- Roles: ADMIN, EDITOR, USER (signed-in), anonymous. Enforce server-side.
+- Every page: loading/empty/error states, responsive (320px+), WCAG AA, keyboard accessible.
+- After each task: run lint, build, tests; fix all errors; git commit; report in <150 words (built, placeholders, manual test steps, limits).

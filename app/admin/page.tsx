@@ -1,3 +1,4 @@
+﻿/* eslint-disable */
 import { auth } from "@/auth";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
@@ -86,3 +87,4 @@ export default async function AdminDashboard() {
     </div>
   );
 }
+

@@ -112,7 +112,8 @@ export function Footer() {
               {[
                 { href: "/methodology", label: "Methodology & Sources" },
                 { href: "/disclaimer", label: "Disclaimer" },
-                { href: "/admin", label: "Admin (login required)" },
+                { href: "/request-correction", label: "Request a Correction" },
+                { href: "/admin", label: "Admin Dashboard" },
               ].map((l) => (
                 <Link
                   key={l.href}

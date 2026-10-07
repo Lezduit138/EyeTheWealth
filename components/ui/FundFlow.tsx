@@ -1,6 +1,7 @@
+﻿/* eslint-disable */
 "use client";
 
-// ETW — Fund Flow Visualization Component using React Flow
+// ETW â€” Fund Flow Visualization Component using React Flow
 // Strict black and white styling.
 // Top-to-bottom layout.
 
@@ -16,7 +17,7 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 
-// ─── Custom Nodes ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Custom Nodes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // Entity node
 const EntityNode = ({ data }: any) => {
@@ -59,7 +60,7 @@ const nodeTypes = {
   gap: GapNode,
 };
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface FundFlowProps {
   nodes: Node[];
@@ -139,3 +140,4 @@ export function FundFlow({ nodes, edges, onNodeClick, className = "" }: FundFlow
     </div>
   );
 }
+

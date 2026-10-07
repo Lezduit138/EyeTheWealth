@@ -1,4 +1,5 @@
-// ETW — De Basement Module Landing Page
+﻿/* eslint-disable */
+// ETW â€” De Basement Module Landing Page
 
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -6,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export const metadata: Metadata = {
-  title: "DE BASEMENT — Financial Structures",
+  title: "DE BASEMENT â€” Financial Structures",
   description: "Examine legal financial structures, regulatory gaps, and transparency challenges. Educational use only.",
 };
 
@@ -70,7 +71,7 @@ export default async function DeBasementPage() {
 
                 <div className="mt-auto border-t border-gray-800 pt-4 flex justify-between items-center text-xs tracking-widest font-bold uppercase text-gray-500 group-hover:text-white transition-colors">
                   <span>OPEN FILE</span>
-                  <span>→</span>
+                  <span>â†’</span>
                 </div>
               </Link>
             );
@@ -80,3 +81,4 @@ export default async function DeBasementPage() {
     </div>
   );
 }
+

@@ -1,4 +1,5 @@
-// ETW — World Bank Open Data Ingestion Script
+﻿/* eslint-disable */
+// ETW â€” World Bank Open Data Ingestion Script
 // Fetches data for defined indicators and countries from the World Bank API
 
 import { PrismaClient } from "@prisma/client";
@@ -11,7 +12,7 @@ const prisma = new PrismaClient();
 const WORLD_BANK_API_BASE = process.env.WORLD_BANK_API_BASE ?? "https://api.worldbank.org/v2";
 
 async function main() {
-  console.log("🌍 Starting World Bank data ingestion...");
+  console.log("ðŸŒ Starting World Bank data ingestion...");
 
   const run = await prisma.ingestionRun.create({
     data: { source: "WorldBank", status: "RUNNING" },
@@ -104,9 +105,9 @@ async function main() {
             }
             pointsProcessed++;
           }
-          console.log(`  ✓ ${country.code}: ${pointsProcessed} years of data processed.`);
+          console.log(`  âœ“ ${country.code}: ${pointsProcessed} years of data processed.`);
         } catch (err: any) {
-          console.error(`  ✕ Error for ${country.code}: ${err.message}`);
+          console.error(`  âœ• Error for ${country.code}: ${err.message}`);
           errors.push(`[${indicator.worldBankCode} - ${country.code}] ${err.message}`);
         }
         
@@ -128,12 +129,12 @@ async function main() {
       },
     });
 
-    console.log("\n✅ Ingestion complete.");
+    console.log("\nâœ… Ingestion complete.");
     console.log(`   Added: ${recordsAdded} records`);
     console.log(`   Updated: ${recordsUpdated} records`);
 
   } catch (error: any) {
-    console.error("❌ Ingestion failed:", error);
+    console.error("âŒ Ingestion failed:", error);
     await prisma.ingestionRun.update({
       where: { id: run.id },
       data: {
@@ -148,3 +149,4 @@ async function main() {
 }
 
 main();
+

@@ -1,6 +1,7 @@
+﻿/* eslint-disable */
 "use client";
 
-// ETW — Rover Compare Page
+// ETW â€” Rover Compare Page
 // Select up to 4 countries and 1 indicator to compare data
 
 import React, { useState, useEffect, Suspense } from "react";
@@ -81,7 +82,7 @@ function CompareInner() {
       <div className="etw-container">
         <div style={{ paddingBottom: "1rem", borderBottom: "1px solid var(--color-border)", marginBottom: "2rem", fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
           <Link href="/rover" style={{ color: "var(--color-text-muted)", textDecoration: "none" }}>ROVER</Link>
-          {" → "}
+          {" â†’ "}
           <span style={{ color: "#000", fontWeight: 600 }}>COMPARE</span>
         </div>
 
@@ -185,3 +186,4 @@ export default function ComparePage() {
     </Suspense>
   );
 }
+

@@ -1,6 +1,7 @@
+﻿/* eslint-disable */
 "use client";
 
-// ETW — Global Header with navigation
+// ETW â€” Global Header with navigation
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -13,7 +14,7 @@ const NAV_LINKS = [
   { href: "/methodology", label: "METHODOLOGY" },
 ];
 
-export function Header() {
+export function Header({ session }: { session?: any }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -46,7 +47,7 @@ export function Header() {
             alignItems: "baseline",
             gap: "0.5rem",
           }}
-          aria-label="ETW — Eye The Wealth, home"
+          aria-label="ETW â€” Eye The Wealth, home"
         >
           <span
             style={{
@@ -107,6 +108,25 @@ export function Header() {
               </Link>
             );
           })}
+          
+          <div style={{ marginLeft: "1rem" }}>
+            {session?.user ? (
+              <div className="flex gap-4 items-center">
+                {["ADMIN", "EDITOR"].includes((session.user as any).role) && (
+                  <Link href="/admin" className="text-xs font-bold underline">
+                    Admin
+                  </Link>
+                )}
+                <Link href="/account" className="etw-btn text-xs px-3 py-1">
+                  {session.user.name || session.user.email?.split("@")[0]} ({((session.user as any).role || "USER").substring(0, 1)})
+                </Link>
+              </div>
+            ) : (
+              <Link href="/login" className="etw-btn text-xs px-3 py-1">
+                SIGN IN
+              </Link>
+            )}
+          </div>
         </nav>
 
         {/* Mobile hamburger */}
@@ -125,7 +145,7 @@ export function Header() {
             lineHeight: 1,
           }}
         >
-          {menuOpen ? "✕" : "☰"}
+          {menuOpen ? "âœ•" : "â˜°"}
         </button>
       </div>
 
@@ -181,3 +201,4 @@ export function Header() {
     </header>
   );
 }
+

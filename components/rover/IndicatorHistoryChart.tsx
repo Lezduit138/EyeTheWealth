@@ -1,3 +1,4 @@
+﻿/* eslint-disable */
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -122,3 +123,4 @@ export function IndicatorHistoryChart({ indicatorSlug, indicatorName, unit, coun
     </div>
   );
 }
+

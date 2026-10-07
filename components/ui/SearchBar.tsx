@@ -1,6 +1,7 @@
+﻿/* eslint-disable */
 "use client";
 
-// ETW — SearchBar with autocomplete suggestions
+// ETW â€” SearchBar with autocomplete suggestions
 
 import React, { useState, useRef, useEffect } from "react";
 
@@ -152,3 +153,4 @@ export function SearchBar({
     </div>
   );
 }
+

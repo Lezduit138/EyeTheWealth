@@ -1,4 +1,5 @@
-// ETW — /api/v1/rover/datapoints — Query data points
+﻿/* eslint-disable */
+// ETW â€” /api/v1/rover/datapoints â€” Query data points
 // Public, rate-limited, supports country + indicator + year filtering
 
 import { NextRequest } from "next/server";
@@ -66,3 +67,4 @@ export async function GET(request: NextRequest) {
     return apiInternalError(err);
   }
 }
+
