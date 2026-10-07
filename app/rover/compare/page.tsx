@@ -1,118 +1,174 @@
 /* eslint-disable */
 "use client";
 
-// ETW â€” Rover Compare Page
-// Select up to 4 countries and 1 indicator to compare data
+// ETW — Rover Compare Page
+// Select up to 4 countries and 1 indicator to compare time-series data
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { IndicatorHistoryChart } from "@/components/rover/IndicatorHistoryChart";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 interface Country {
   code: string;
   name: string;
+  region?: string;
 }
 
 interface Indicator {
   slug: string;
   name: string;
-  category: {
-    name: string;
-  };
+  unit?: string;
+  category: { name: string };
 }
+
+const COLORS = ["#000000", "#444444", "#888888", "#bbbbbb"];
+const DASHES = ["", "5 5", "3 3", "10 4"];
 
 function CompareInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [indicators, setIndicators] = useState<Indicator[]>([]);
-
-  // Initialize from URL params on mount
   const urlCountriesInit = (searchParams.get("countries")?.split(",").filter(Boolean) || []).map(c => c.toUpperCase());
-  const urlIndicatorInit = searchParams.get("indicator") || "";
+  const urlIndicatorInit = searchParams.get("indicator") || "gdp-per-capita";
 
-  // Local state for selections — initialized directly from search params
+  const [allCountries, setAllCountries] = useState<Country[]>([]);
+  const [indicators, setIndicators] = useState<Indicator[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>(urlCountriesInit);
   const [selectedIndicator, setSelectedIndicator] = useState<string>(urlIndicatorInit);
+  const [countrySearch, setCountrySearch] = useState("");
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [currentIndicator, setCurrentIndicator] = useState<Indicator | null>(null);
+  const [loadingChart, setLoadingChart] = useState(false);
 
+  // Load countries and indicators on mount
   useEffect(() => {
-    // Fetch options on mount
     Promise.all([
-      fetch("/api/v1/rover/countries").then(r => r.json()),
-      fetch("/api/v1/rover/indicators").then(r => r.json()),
+      fetch("/api/v1/rover/countries?all=1&pageSize=300").then(r => r.json()),
+      fetch("/api/v1/rover/indicators?pageSize=100").then(r => r.json()),
     ]).then(([cRes, iRes]) => {
-      if (cRes.success) setCountries(cRes.data);
+      if (cRes.success) setAllCountries(cRes.data.filter((c: Country & { isAggregate?: boolean }) => !c.isAggregate));
       if (iRes.success) setIndicators(iRes.data);
-    });
+    }).catch(console.error);
   }, []);
+
+  // Fetch chart data when selection changes
+  useEffect(() => {
+    if (!selectedIndicator || selectedCountries.length === 0) {
+      setChartData([]);
+      return;
+    }
+
+    setLoadingChart(true);
+    const entitiesParam = selectedCountries.join(",");
+    fetch(`/api/v1/rover/series?indicator=${selectedIndicator}&entities=${entitiesParam}&from=1990`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.success) { setChartData([]); return; }
+
+        // Merge series into { year, CODE1: val, CODE2: val, ... }
+        const yearMap = new Map<number, any>();
+        for (const [code, points] of Object.entries(data.data.series)) {
+          for (const pt of (points as any[])) {
+            if (!yearMap.has(pt.year)) yearMap.set(pt.year, { year: pt.year });
+            yearMap.get(pt.year)[code] = pt.value;
+          }
+        }
+        const sorted = Array.from(yearMap.values()).sort((a, b) => a.year - b.year);
+        setChartData(sorted);
+
+        // Get indicator details
+        const ind = indicators.find(i => i.slug === selectedIndicator);
+        setCurrentIndicator(ind || null);
+      })
+      .catch(console.error)
+      .finally(() => setLoadingChart(false));
+  }, [selectedIndicator, selectedCountries, indicators]);
 
   const handleCountryToggle = (code: string) => {
     let next: string[];
     if (selectedCountries.includes(code)) {
-      next = selectedCountries.filter((c) => c !== code);
+      next = selectedCountries.filter(c => c !== code);
     } else {
-      if (selectedCountries.length >= 4) return; // Limit to 4
+      if (selectedCountries.length >= 4) return;
       next = [...selectedCountries, code];
     }
-    updateUrl(next, selectedIndicator);
-  };
-
-  const handleIndicatorSelect = (slug: string) => {
-    updateUrl(selectedCountries, slug);
-  };
-
-  const updateUrl = (cList: string[], ind: string) => {
+    setSelectedCountries(next);
     const params = new URLSearchParams();
-    if (cList.length > 0) params.set("countries", cList.join(",").toLowerCase());
-    if (ind) params.set("indicator", ind);
-    router.push(`/rover/compare?${params.toString()}`);
+    if (next.length > 0) params.set("countries", next.join(","));
+    if (selectedIndicator) params.set("indicator", selectedIndicator);
+    router.replace(`/rover/compare?${params.toString()}`, { scroll: false });
   };
 
-  const currentIndicator = indicators.find((i) => i.slug === selectedIndicator);
+  const filteredCountries = countrySearch.trim()
+    ? allCountries.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase()) || c.code.toLowerCase().includes(countrySearch.toLowerCase()))
+    : allCountries;
+
+  const formatValue = (v: number, compact = false) => {
+    if (compact) return v.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 1 });
+    return v.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  };
 
   return (
     <div className="etw-page">
       <div className="etw-container">
+        {/* Breadcrumb */}
         <div style={{ paddingBottom: "1rem", borderBottom: "1px solid var(--color-border)", marginBottom: "2rem", fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
           <Link href="/rover" style={{ color: "var(--color-text-muted)", textDecoration: "none" }}>ROVER</Link>
-          {" â†’ "}
+          {" → "}
           <span style={{ color: "#000", fontWeight: 600 }}>COMPARE</span>
         </div>
 
         <h1 style={{ marginBottom: "2rem" }}>Compare Countries</h1>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "2rem", marginBottom: "3rem" }}>
-          
-          {/* Controls */}
-          <div>
-            <div style={{ marginBottom: "2rem" }}>
-              <p className="etw-label" style={{ marginBottom: "0.5rem" }}>SELECT INDICATOR</p>
+        <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "2rem" }}>
+          {/* LEFT: Controls */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+            {/* Indicator picker */}
+            <div>
+              <p className="etw-label" style={{ marginBottom: "0.5rem" }}>INDICATOR</p>
               <select
                 className="etw-input"
                 value={selectedIndicator}
-                onChange={(e) => handleIndicatorSelect(e.target.value)}
+                onChange={e => setSelectedIndicator(e.target.value)}
+                style={{ width: "100%" }}
               >
-                <option value="">-- Choose an indicator --</option>
-                {indicators.map((ind) => (
-                  <option key={ind.slug} value={ind.slug}>
-                    {ind.category.name}: {ind.name}
-                  </option>
+                <option value="">-- Choose --</option>
+                {indicators.map(ind => (
+                  <option key={ind.slug} value={ind.slug}>{ind.category.name}: {ind.name}</option>
                 ))}
               </select>
             </div>
 
-            <div>
+            {/* Country picker */}
+            <div style={{ flex: 1 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.5rem" }}>
-                <p className="etw-label" style={{ margin: 0 }}>SELECT COUNTRIES</p>
-                <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
-                  {selectedCountries.length} / 4 selected
-                </span>
+                <p className="etw-label" style={{ margin: 0 }}>COUNTRIES</p>
+                <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>{selectedCountries.length}/4</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {countries.map((c) => (
-                  <label key={c.code} style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+              <input
+                type="text"
+                placeholder="Search..."
+                value={countrySearch}
+                onChange={e => setCountrySearch(e.target.value)}
+                className="etw-input"
+                style={{ width: "100%", marginBottom: "0.5rem", fontSize: "0.8125rem", padding: "0.4rem 0.6rem" }}
+              />
+              <div style={{ maxHeight: 300, overflowY: "auto", border: "1px solid var(--color-border)" }}>
+                {filteredCountries.map(c => (
+                  <label
+                    key={c.code}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.4rem 0.75rem",
+                      cursor: "pointer",
+                      borderBottom: "1px solid #f0f0f0",
+                      background: selectedCountries.includes(c.code) ? "#000" : "#fff",
+                      color: selectedCountries.includes(c.code) ? "#fff" : "#000",
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={selectedCountries.includes(c.code)}
@@ -120,48 +176,74 @@ function CompareInner() {
                       disabled={!selectedCountries.includes(c.code) && selectedCountries.length >= 4}
                       style={{ accentColor: "#000" }}
                     />
-                    <span style={{ fontSize: "0.875rem" }}>{c.name}</span>
+                    <span style={{ fontSize: "0.8125rem", flex: 1 }}>{c.name}</span>
+                    <span style={{ fontSize: "0.6875rem", opacity: 0.5 }}>{c.code}</span>
                   </label>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Chart Display */}
-          <div>
-            <div style={{ border: "1px solid var(--color-border)", padding: "2rem", minHeight: "450px" }}>
-              {!selectedIndicator ? (
-                <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center", color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
-                  Select an indicator to view data.
+          {/* RIGHT: Chart */}
+          <div style={{ border: "1px solid var(--color-border)", padding: "2rem", minHeight: 450 }}>
+            {!selectedIndicator || selectedCountries.length === 0 ? (
+              <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center", color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
+                {!selectedIndicator ? "← Select an indicator" : "← Select at least one country"}
+              </div>
+            ) : loadingChart ? (
+              <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center" }}>
+                <span className="etw-label" style={{ color: "var(--color-text-muted)" }}>Loading data...</span>
+              </div>
+            ) : chartData.length === 0 ? (
+              <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center" }}>
+                <span className="etw-not-disclosed">No data available for this selection.</span>
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: "1rem" }}>
+                  <h3 style={{ fontSize: "1rem", marginBottom: "0.125rem" }}>{currentIndicator?.name}</h3>
+                  <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+                    {selectedCountries.join(" · ")} · {currentIndicator?.unit}
+                  </p>
                 </div>
-              ) : selectedCountries.length === 0 ? (
-                <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center", color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
-                  Select at least one country.
+                <div style={{ height: 360 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" vertical={false} />
+                      <XAxis dataKey="year" tick={{ fontSize: 11, fill: "#666" }} tickLine={false} />
+                      <YAxis
+                        tickFormatter={(v) => formatValue(v, true)}
+                        tick={{ fontSize: 11, fill: "#666" }}
+                        tickLine={false}
+                        width={72}
+                      />
+                      <Tooltip
+                        contentStyle={{ border: "1px solid #000", borderRadius: 0, fontSize: 12 }}
+                        formatter={(value: number) => [formatValue(value), ""]}
+                      />
+                      <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
+                      {selectedCountries.map((code, i) => (
+                        <Line
+                          key={code}
+                          type="monotone"
+                          dataKey={code}
+                          stroke={COLORS[i % COLORS.length]}
+                          strokeWidth={2}
+                          strokeDasharray={DASHES[i % DASHES.length]}
+                          dot={false}
+                          activeDot={{ r: 4 }}
+                          connectNulls
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
-              ) : (
-                <>
-                  <div style={{ marginBottom: "1.5rem" }}>
-                    <h3 style={{ fontSize: "1.125rem", marginBottom: "0.25rem" }}>{currentIndicator?.name}</h3>
-                    <p style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>Comparing: {selectedCountries.join(", ")}</p>
-                  </div>
-                  
-                  {/* Reuse our history chart, modifying it to only show selected countries by passing it standard data but filtering on the backend via query?
-                      The current IndicatorHistoryChart fetches all data for the indicator and displays it all.
-                      Let's modify IndicatorHistoryChart to accept an optional array of countries. */}
-                  
-                  <IndicatorHistoryChart
-                    indicatorSlug={selectedIndicator}
-                    indicatorName={currentIndicator?.name || ""}
-                    unit="" // We don't have unit here easily without fetching the detail, but that's ok
-                    countries={selectedCountries}
-                  />
-                  
-                  {/* For a true MVP, IndicatorHistoryChart currently fetches ALL countries. To fix this, we should pass selectedCountries. */}
-                </>
-              )}
-            </div>
+                <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: "1px solid #eee", fontSize: "0.6875rem", color: "#999" }}>
+                  Source: World Bank Open Data · Data shown 1990–2026 where available
+                </div>
+              </>
+            )}
           </div>
-
         </div>
       </div>
     </div>
@@ -173,7 +255,7 @@ export default function ComparePage() {
     <Suspense fallback={
       <div className="etw-page">
         <div className="etw-container">
-          <p className="etw-label text-gray-500 mt-8">Loading comparison tool...</p>
+          <p className="etw-label" style={{ color: "var(--color-text-muted)", marginTop: "2rem" }}>Loading...</p>
         </div>
       </div>
     }>
@@ -181,4 +263,3 @@ export default function ComparePage() {
     </Suspense>
   );
 }
-

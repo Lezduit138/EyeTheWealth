@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // ETW — /rover/[country] — Country Profile Page
+// Works for any ISO3 country code or country name slug
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -6,31 +8,26 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { SourcePanel, SourceDetail } from "@/components/ui/SourcePanel";
+import CountryCharts from "./CountryCharts";
 
 interface Props {
   params: Promise<{ country: string }>;
 }
 
-// Country code normalization (URL slug → ISO alpha-3)
-const COUNTRY_MAP: Record<string, string> = {
-  ind: "IND", india: "IND",
-  usa: "USA", "united-states": "USA",
-  chn: "CHN", china: "CHN",
-  gbr: "GBR", uk: "GBR", "united-kingdom": "GBR",
-  deu: "DEU", germany: "DEU",
-  bra: "BRA", brazil: "BRA",
-  jpn: "JPN", japan: "JPN",
-  nga: "NGA", nigeria: "NGA",
-};
-
 async function getCountryData(slug: string) {
-  const code = COUNTRY_MAP[slug.toLowerCase()];
-  if (!code) return null;
-
-  const country = await prisma.country.findUnique({
-    where: { code },
+  // Try direct ISO3 code first, then try by name slug
+  const code = slug.toUpperCase();
+  
+  let country = await prisma.country.findFirst({
+    where: {
+      OR: [
+        { code },
+        { name: slug.replace(/-/g, " ") },
+      ],
+    },
     include: {
       dataPoints: {
+        where: { value: { not: null } },
         include: {
           indicator: { include: { category: true } },
           source: true,
@@ -39,6 +36,7 @@ async function getCountryData(slug: string) {
       },
     },
   });
+
   return country;
 }
 
@@ -56,13 +54,11 @@ export default async function CountryPage({ params }: Props) {
   const { country: slug } = await params;
   const country = await getCountryData(slug);
   if (!country) notFound();
+  const countryData = country as any;
 
   // Group datapoints: latest per indicator
-  const latestByIndicator = new Map<
-    string,
-    typeof country.dataPoints[0]
-  >();
-  for (const dp of country.dataPoints) {
+  const latestByIndicator = new Map<string, any>();
+  for (const dp of countryData.dataPoints as any[]) {
     const existing = latestByIndicator.get(dp.indicatorId);
     if (!existing || dp.year > existing.year) {
       latestByIndicator.set(dp.indicatorId, dp);
@@ -70,10 +66,7 @@ export default async function CountryPage({ params }: Props) {
   }
 
   // Group by category
-  const byCategory = new Map<
-    string,
-    { catName: string; items: typeof country.dataPoints }
-  >();
+  const byCategory = new Map<string, { catName: string; items: any[] }>();
   for (const dp of latestByIndicator.values()) {
     const catName = dp.indicator.category.name;
     if (!byCategory.has(catName)) {
@@ -83,6 +76,12 @@ export default async function CountryPage({ params }: Props) {
   }
 
   const hasData = latestByIndicator.size > 0;
+
+  // Build historical series for charts (GDP per capita over time)
+  const gdpHistory = (countryData.dataPoints as any[])
+    .filter((dp: any) => dp.indicator.slug === "gdp-per-capita" && dp.value !== null)
+    .sort((a: any, b: any) => a.year - b.year)
+    .map((dp: any) => ({ year: dp.year, value: dp.value as number }));
 
   return (
     <div className="etw-page">
@@ -114,22 +113,32 @@ export default async function CountryPage({ params }: Props) {
             <div>
               <p className="etw-label" style={{ marginBottom: "0.25rem" }}>COUNTRY PROFILE</p>
               <h1 style={{ marginBottom: "0.25rem" }}>{country.name}</h1>
-              {country.region && (
-                <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
-                  {country.region}
-                  {country.incomeLevel ? ` · ${country.incomeLevel}` : ""}
-                  {country.capitalCity ? ` · Capital: ${country.capitalCity}` : ""}
-                </p>
-              )}
+              <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                {country.code}
+                {country.region ? ` · ${country.region}` : ""}
+                {country.incomeLevel ? ` · ${country.incomeLevel}` : ""}
+                {country.capitalCity ? ` · Capital: ${country.capitalCity}` : ""}
+              </p>
             </div>
           </div>
 
           <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", flexWrap: "wrap" }}>
-            <Link href={`/rover/compare?countries=${country.code.toLowerCase()}`} className="etw-btn">
+            <Link href={`/rover/compare?countries=${country.code}`} className="etw-btn">
               Compare with other countries →
+            </Link>
+            <Link href="/rover" className="etw-btn etw-btn-ghost">
+              ← Back to Globe
             </Link>
           </div>
         </div>
+
+        {/* GDP Chart */}
+        {gdpHistory.length > 1 && (
+          <div style={{ marginBottom: "3rem" }}>
+            <h2 className="etw-section-heading" style={{ marginBottom: "1.5rem" }}>GDP PER CAPITA TREND</h2>
+            <CountryCharts gdpHistory={gdpHistory} countryName={country.name} />
+          </div>
+        )}
 
         {/* No data message */}
         {!hasData && (
@@ -140,10 +149,7 @@ export default async function CountryPage({ params }: Props) {
               textAlign: "center",
             }}
           >
-            <p
-              className="etw-label"
-              style={{ marginBottom: "1rem", color: "var(--color-text-muted)" }}
-            >
+            <p className="etw-label" style={{ marginBottom: "1rem", color: "var(--color-text-muted)" }}>
               NO DATA YET
             </p>
             <p style={{ color: "var(--color-text-secondary)", marginBottom: "1.5rem" }}>
@@ -152,9 +158,9 @@ export default async function CountryPage({ params }: Props) {
             <p style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>
               Run{" "}
               <code style={{ fontFamily: "var(--font-mono)", background: "#eee", padding: "0.1rem 0.4rem" }}>
-                npm run ingest:worldbank
+                npm run ingest:all
               </code>{" "}
-              to fetch real data from the World Bank API.
+              to fetch real data from the World Bank and IMF APIs.
             </p>
           </div>
         )}
