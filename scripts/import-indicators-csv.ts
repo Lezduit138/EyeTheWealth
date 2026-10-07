@@ -22,7 +22,7 @@ async function main() {
   }
 
   const fileContent = fs.readFileSync(filePath, "utf-8");
-  const records = parse(fileContent, { columns: true, skip_empty_lines: true });
+  const records = parse(fileContent, { columns: true, skip_empty_lines: true }) as any[];
 
   console.log(`\n📄 Parsing ${records.length} records from ${filePath}...`);
 

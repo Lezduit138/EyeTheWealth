@@ -41,10 +41,10 @@ export async function GET(request: NextRequest) {
     };
 
     if (fromYearParam) {
-      whereClause.year = { ...whereClause.year, gte: parseInt(fromYearParam, 10) };
+      whereClause.year = { ...(whereClause.year as any), gte: parseInt(fromYearParam, 10) };
     }
     if (toYearParam) {
-      whereClause.year = { ...whereClause.year, lte: parseInt(toYearParam, 10) };
+      whereClause.year = { ...(whereClause.year as any), lte: parseInt(toYearParam, 10) };
     }
 
     const dataPoints = await prisma.dataPoint.findMany({

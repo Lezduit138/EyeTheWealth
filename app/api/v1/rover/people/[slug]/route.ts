@@ -9,15 +9,16 @@ export const revalidate = 3600;
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
+  const resolvedParams = await params;
   const ip = getClientIp(request);
   const { allowed } = checkRateLimit(ip);
   if (!allowed) return apiError("Rate limit exceeded", 429);
 
   try {
     const person = await prisma.person.findUnique({
-      where: { slug: params.slug },
+      where: { slug: resolvedParams.slug },
       include: {
         netWorthHistory: {
           orderBy: { year: "desc" },

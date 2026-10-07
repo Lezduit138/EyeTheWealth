@@ -82,38 +82,6 @@ export function Header() {
           style={{ display: "flex", gap: "0", alignItems: "center" }}
           className="hidden-mobile"
         >
-          {/* Module quick-links */}
-          {[
-            { href: "/rover", label: "ROVER" },
-            { href: "/contributor", label: "CONTRIBUTOR" },
-            { href: "/de-basement", label: "DE BASEMENT" },
-          ].map((link) => {
-            const isActive = pathname.startsWith(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                aria-current={isActive ? "page" : undefined}
-                style={{
-                  fontSize: "0.6875rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  textDecoration: "none",
-                  padding: "0 0.75rem",
-                  height: "56px",
-                  display: "flex",
-                  alignItems: "center",
-                  borderBottom: isActive ? "3px solid #000" : "3px solid transparent",
-                  color: isActive ? "#000" : "var(--color-text-muted)",
-                  transition: "color 0.15s, border-color 0.15s",
-                }}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-
           {NAV_LINKS.map((link) => {
             const isActive = pathname.startsWith(link.href);
             return (
@@ -243,9 +211,6 @@ export function Header() {
           }}
         >
           {[
-            { href: "/rover", label: "ROVER" },
-            { href: "/contributor", label: "CONTRIBUTOR" },
-            { href: "/de-basement", label: "DE BASEMENT" },
             { href: "/methodology", label: "METHODOLOGY" },
           ].map((link) => {
             const isActive = pathname.startsWith(link.href);
