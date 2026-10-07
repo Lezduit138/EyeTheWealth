@@ -266,8 +266,7 @@ export function FundFlow({ nodes: initialNodes, edges: initialEdges, className =
             style={{ 
               borderRadius: 0, 
               border: "2px solid #000", 
-              boxShadow: "none",
-              button: { borderBottom: "2px solid #000" } 
+              boxShadow: "none"
             }} 
             showInteractive={false}
           />
