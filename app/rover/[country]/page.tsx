@@ -18,7 +18,7 @@ async function getCountryData(slug: string) {
   // Try direct ISO3 code first, then try by name slug
   const code = slug.toUpperCase();
   
-  let country = await prisma.country.findFirst({
+  const country = await prisma.country.findFirst({
     where: {
       OR: [
         { code },

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, react-hooks/set-state-in-effect, react/no-unescaped-entities */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, react-hooks/set-state-in-effect */
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -154,7 +154,7 @@ export default function ClientDashboard({ categories }: { categories: any[] }) {
           <Link href="/rover/compare" className="flex-1 text-center bg-white text-black border border-black p-2 text-sm font-bold uppercase hover:bg-gray-100">
             Compare
           </Link>
-          <Link href={`/rover/analyze?indicator=${selectedIndicator}`} className="flex-1 text-center bg-black text-white border border-black p-2 text-sm font-bold uppercase hover:bg-gray-800">
+          <Link href={`/rover/indicator/${selectedIndicator}`} className="flex-1 text-center bg-black text-white border border-black p-2 text-sm font-bold uppercase hover:bg-gray-800">
             Analyze
           </Link>
         </div>

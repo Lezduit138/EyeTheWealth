@@ -51,7 +51,7 @@ export default function Globe({ mapData, selectedCountryCode, onCountryClick, wi
       colors = ["#e0e0e0", "#bdbdbd", "#9e9e9e", "#757575", "#424242", "#212121"]; // Greys
     }
 
-    // @ts-ignore
+    // @ts-expect-error - d3-scale generic types can be strict, simple assertion fine here
     return scaleThreshold<number, string>()
       .domain(mapData.stats.breaks)
       .range(colors as any);

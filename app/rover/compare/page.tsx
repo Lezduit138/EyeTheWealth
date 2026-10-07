@@ -40,6 +40,8 @@ function CompareInner() {
   const [chartData, setChartData] = useState<any[]>([]);
   const [currentIndicator, setCurrentIndicator] = useState<Indicator | null>(null);
   const [loadingChart, setLoadingChart] = useState(false);
+  const [factors, setFactors] = useState<any[]>([]);
+  const [loadingFactors, setLoadingFactors] = useState(false);
 
   // Load countries and indicators on mount
   useEffect(() => {
@@ -83,6 +85,19 @@ function CompareInner() {
       })
       .catch(console.error)
       .finally(() => setLoadingChart(false));
+
+    // Fetch factors
+    setLoadingFactors(true);
+    fetch(`/api/v1/rover/compare-factors?countries=${entitiesParam}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          setFactors(data.data);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoadingFactors(false));
+
   }, [selectedIndicator, selectedCountries, indicators]);
 
   const handleCountryToggle = (code: string) => {
@@ -243,6 +258,70 @@ function CompareInner() {
                 </div>
               </>
             )}
+
+            {/* FACTOR COMPARISON */}
+            {selectedCountries.length > 1 && (
+              <div style={{ marginTop: "3rem", borderTop: "2px solid #000", paddingTop: "2rem" }}>
+                <h3 style={{ marginBottom: "1rem" }}>Key Factors Comparison</h3>
+                {loadingFactors ? (
+                  <div style={{ fontSize: "0.875rem", color: "#666" }}>Loading factors...</div>
+                ) : factors.length === 0 ? (
+                  <div style={{ fontSize: "0.875rem", color: "#666" }}>No factors available for these countries.</div>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "1px solid #000" }}>
+                          <th style={{ textAlign: "left", padding: "0.5rem", fontWeight: "bold" }}>Factor</th>
+                          {selectedCountries.map(code => {
+                            const c = allCountries.find(x => x.code === code);
+                            return (
+                              <th key={code} style={{ textAlign: "right", padding: "0.5rem", fontWeight: "bold" }}>
+                                {c?.name || code}
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {factors.map((f, i) => (
+                          <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
+                            <td style={{ padding: "0.5rem", color: "#333" }}>
+                              {f.name} <span style={{ fontSize: "0.6875rem", color: "#999" }}>({f.unit})</span>
+                            </td>
+                            {selectedCountries.map(code => {
+                              const cell = f.data[code];
+                              const val = cell ? formatValue(cell.value, true) : "N/A";
+                              const year = cell ? `(${cell.year})` : "";
+                              
+                              // Determine if this is the "best" value among selected
+                              let isBest = false;
+                              if (cell && f.polarity !== "NEUTRAL") {
+                                const allVals = selectedCountries
+                                  .map(c => f.data[c]?.value)
+                                  .filter(v => v !== undefined && v !== null) as number[];
+                                
+                                if (allVals.length > 1) {
+                                  if (f.polarity === "POSITIVE") isBest = cell.value === Math.max(...allVals);
+                                  if (f.polarity === "NEGATIVE") isBest = cell.value === Math.min(...allVals);
+                                }
+                              }
+
+                              return (
+                                <td key={code} style={{ textAlign: "right", padding: "0.5rem", fontWeight: isBest ? "bold" : "normal", color: isBest ? (f.polarity === "POSITIVE" ? "#006400" : (f.polarity === "NEGATIVE" ? "#006400" : "#000")) : "#666" }}>
+                                  {val} <span style={{ fontSize: "0.6875rem", opacity: 0.5 }}>{year}</span>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
           </div>
         </div>
       </div>
