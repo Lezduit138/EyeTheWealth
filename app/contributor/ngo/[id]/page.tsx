@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { SourcePanel, SourceDetail } from "@/components/ui/SourcePanel";
 import { SampleDataBanner } from "@/components/ui/Card";
+import { NgoFundFlowWrapper } from "@/components/contributor/NgoFundFlowWrapper";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -220,11 +221,14 @@ export default async function NgoProfilePage({ params }: Props) {
           </section>
         )}
 
-        {/* Transaction Ledger */}
         <section aria-labelledby="financial-ledger" className="mb-12">
           <h2 id="financial-ledger" className="etw-section-heading mb-6">
             PUBLIC TRANSACTION RECORDS (LEDGER)
           </h2>
+          
+          <div className="mb-10">
+            <NgoFundFlowWrapper ngoName={ngo.name} transactions={ngo.transactions} />
+          </div>
 
           {ngo.transactions.length === 0 ? (
             <div className="border border-dashed border-gray-300 p-10 text-center">

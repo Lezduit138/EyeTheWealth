@@ -15,16 +15,21 @@
     "ingest:all": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/ingest-worldbank.ts",
     "ingest:worldbank": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/ingest-worldbank.ts",
     "migrate:indicators": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/migrate-indicators.ts",
-    "import:csv": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/import-indicators-csv.ts"
+    "import:csv": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/import-indicators-csv.ts",
+    "import:ngos": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/import-ngos-csv.ts",
+    "import:financials": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/import-financials-csv.ts",
+    "seed:contributor": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/seed-contributor-samples.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
     "@prisma/client": "^6.7.0",
+    "@types/dagre": "^0.7.54",
     "axios": "^1.9.0",
     "bcryptjs": "^3.0.3",
     "csv-parse": "^7.0.3",
     "d3-scale": "^4.0.2",
     "d3-scale-chromatic": "^3.1.0",
+    "dagre": "^0.8.5",
     "lucide-react": "^1.52.0",
     "next": "16.3.8",
     "next-auth": "^5.0.0-beta.32",

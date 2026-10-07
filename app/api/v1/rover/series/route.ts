@@ -1,5 +1,6 @@
 // ETW — /api/v1/rover/series — Timeseries data for an indicator and entities
 // Public endpoint, rate limited, cached
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";

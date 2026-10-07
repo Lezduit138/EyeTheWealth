@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 // ETW â€” Contributor Module Landing Page (NGO Directory)
 
 import type { Metadata } from "next";
@@ -22,7 +22,8 @@ const DISTRICTS = [
 
 const CATEGORIES = [
   "Health", "Education", "Poverty", "Women", "Children",
-  "Disaster relief", "Food", "Environment", "Disability", "Rural development"
+  "Disaster relief", "Food", "Environment", "Disability", "Rural development",
+  "Religious"
 ];
 
 interface Props {
@@ -154,10 +155,16 @@ export default async function ContributorPage({ searchParams }: Props) {
             )}
           </form>
 
-          <div className="p-4 bg-gray-50 border border-gray-200">
+          <div className="p-4 bg-gray-50 border border-gray-200 mb-4">
             <p className="etw-label mb-2 text-gray-500">ABOUT THIS DIRECTORY</p>
             <p className="text-sm text-gray-600">
               Only publicly registered entities are listed. Financial records are sourced from official filings (FCRA, MCA) or public annual reports.
+            </p>
+          </div>
+          <div className="p-4 border-2 border-black text-sm">
+            <p className="font-bold uppercase tracking-widest text-xs mb-2">DATA STATUS</p>
+            <p className="text-gray-700 leading-relaxed">
+              Current records are <span className="font-bold">SAMPLE DATA</span> labelled as such. Real NGO data can be loaded by admins via the CSV importer or official scraper scripts. Sample data is removed when a real record for the same registration number is imported.
             </p>
           </div>
         </div>

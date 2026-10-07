@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // ETW — Manual Data Importer (CSV)
 // For Wealth and HDI indicators where no free machine-readable API exists.
 // Expects CSV with headers: indicator_slug, country_code, year, value, unit, source_name, source_url, notes
