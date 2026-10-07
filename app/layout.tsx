@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { Providers } from "@/components/layout/Providers";
+import { auth } from "@/auth";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -31,26 +33,26 @@ export const metadata: Metadata = {
   },
 };
 
-import { auth } from "@/auth";
-
 export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const session = await auth();
-  
+
   return (
     <html lang="en" className={inter.className}>
       <body>
-        <a href="#main-content" className="skip-link">
-          Skip to main content
-        </a>
-        <Header session={session} />
-        <main id="main-content" tabIndex={-1}>
-          {children}
-        </main>
-        <Footer />
+        <Providers session={session}>
+          <a href="#main-content" className="skip-link">
+            Skip to main content
+          </a>
+          <Header />
+          <main id="main-content" tabIndex={-1}>
+            {children}
+          </main>
+          <Footer />
+        </Providers>
       </body>
     </html>
   );

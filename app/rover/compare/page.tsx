@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 "use client";
 
 // ETW â€” Rover Compare Page
@@ -29,9 +29,13 @@ function CompareInner() {
   const [countries, setCountries] = useState<Country[]>([]);
   const [indicators, setIndicators] = useState<Indicator[]>([]);
 
-  // Local state for selections
-  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
-  const [selectedIndicator, setSelectedIndicator] = useState<string>("");
+  // Initialize from URL params on mount
+  const urlCountriesInit = (searchParams.get("countries")?.split(",").filter(Boolean) || []).map(c => c.toUpperCase());
+  const urlIndicatorInit = searchParams.get("indicator") || "";
+
+  // Local state for selections — initialized directly from search params
+  const [selectedCountries, setSelectedCountries] = useState<string[]>(urlCountriesInit);
+  const [selectedIndicator, setSelectedIndicator] = useState<string>(urlIndicatorInit);
 
   useEffect(() => {
     // Fetch options on mount
@@ -43,15 +47,6 @@ function CompareInner() {
       if (iRes.success) setIndicators(iRes.data);
     });
   }, []);
-
-  useEffect(() => {
-    // Initialize from query string
-    const urlCountries = searchParams.get("countries")?.split(",").filter(Boolean) || [];
-    const urlIndicator = searchParams.get("indicator") || "";
-
-    setSelectedCountries(urlCountries.map(c => c.toUpperCase()));
-    setSelectedIndicator(urlIndicator);
-  }, [searchParams]);
 
   const handleCountryToggle = (code: string) => {
     let next: string[];

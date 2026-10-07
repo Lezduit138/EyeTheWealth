@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 "use client";
 
 // ETW â€” SearchBar with autocomplete suggestions
@@ -83,7 +83,7 @@ export function SearchBar({
   };
 
   return (
-    <div className={`relative ${className}`} role="combobox" aria-haspopup="listbox" aria-expanded={showSuggestions}>
+    <div className={`relative ${className}`}>
       <div className="flex">
         <label htmlFor={id} className="sr-only">
           {placeholder}
@@ -92,6 +92,7 @@ export function SearchBar({
           ref={inputRef}
           id={id}
           type="search"
+          role="combobox"
           className="etw-input flex-1"
           placeholder={placeholder}
           value={value}
@@ -101,6 +102,8 @@ export function SearchBar({
           onBlur={handleBlur}
           autoComplete="off"
           aria-autocomplete="list"
+          aria-haspopup="listbox"
+          aria-expanded={showSuggestions}
           aria-controls={`${id}-suggestions`}
           aria-activedescendant={activeIndex >= 0 ? `${id}-suggestion-${activeIndex}` : undefined}
         />

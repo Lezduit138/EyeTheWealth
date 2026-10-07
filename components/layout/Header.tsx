@@ -1,22 +1,25 @@
-﻿/* eslint-disable */
 "use client";
 
-// ETW â€” Global Header with navigation
+// ETW — Global Header with navigation
 
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 
+// Only non-module nav links — module cards are on the home page
 const NAV_LINKS = [
-  { href: "/rover", label: "ROVER" },
-  { href: "/contributor", label: "CONTRIBUTOR" },
-  { href: "/de-basement", label: "DE BASEMENT" },
   { href: "/methodology", label: "METHODOLOGY" },
 ];
 
-export function Header({ session }: { session?: any }) {
+export function Header() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { data: session, status } = useSession();
+
+  const user = session?.user;
+  const role = (user as { role?: string } | undefined)?.role;
+  const isAdmin = role === "ADMIN" || role === "EDITOR";
 
   return (
     <header
@@ -47,7 +50,7 @@ export function Header({ session }: { session?: any }) {
             alignItems: "baseline",
             gap: "0.5rem",
           }}
-          aria-label="ETW â€” Eye The Wealth, home"
+          aria-label="ETW — Eye The Wealth, home"
         >
           <span
             style={{
@@ -79,11 +82,13 @@ export function Header({ session }: { session?: any }) {
           style={{ display: "flex", gap: "0", alignItems: "center" }}
           className="hidden-mobile"
         >
-          {NAV_LINKS.map((link) => {
-            const isActive =
-              link.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(link.href);
+          {/* Module quick-links */}
+          {[
+            { href: "/rover", label: "ROVER" },
+            { href: "/contributor", label: "CONTRIBUTOR" },
+            { href: "/de-basement", label: "DE BASEMENT" },
+          ].map((link) => {
+            const isActive = pathname.startsWith(link.href);
             return (
               <Link
                 key={link.href}
@@ -95,7 +100,7 @@ export function Header({ session }: { session?: any }) {
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
                   textDecoration: "none",
-                  padding: "0 1rem",
+                  padding: "0 0.75rem",
                   height: "56px",
                   display: "flex",
                   alignItems: "center",
@@ -108,21 +113,98 @@ export function Header({ session }: { session?: any }) {
               </Link>
             );
           })}
-          
-          <div style={{ marginLeft: "1rem" }}>
-            {session?.user ? (
-              <div className="flex gap-4 items-center">
-                {["ADMIN", "EDITOR"].includes((session.user as any).role) && (
-                  <Link href="/admin" className="text-xs font-bold underline">
-                    Admin
+
+          {NAV_LINKS.map((link) => {
+            const isActive = pathname.startsWith(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={isActive ? "page" : undefined}
+                style={{
+                  fontSize: "0.6875rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  textDecoration: "none",
+                  padding: "0 0.75rem",
+                  height: "56px",
+                  display: "flex",
+                  alignItems: "center",
+                  borderBottom: isActive ? "3px solid #000" : "3px solid transparent",
+                  color: isActive ? "#000" : "var(--color-text-muted)",
+                  transition: "color 0.15s, border-color 0.15s",
+                }}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+
+          {/* Auth area */}
+          <div style={{ marginLeft: "0.75rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            {status === "loading" ? (
+              <span style={{ fontSize: "0.6875rem", color: "var(--color-text-muted)" }}>•••</span>
+            ) : user ? (
+              <>
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    style={{
+                      fontSize: "0.6875rem",
+                      fontWeight: 700,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      textDecoration: "none",
+                      color: "var(--color-text-muted)",
+                      padding: "0 0.5rem",
+                      height: "56px",
+                      display: "flex",
+                      alignItems: "center",
+                      borderBottom: pathname.startsWith("/admin") ? "3px solid #000" : "3px solid transparent",
+                    }}
+                  >
+                    ADMIN
                   </Link>
                 )}
-                <Link href="/account" className="etw-btn text-xs px-3 py-1">
-                  {session.user.name || session.user.email?.split("@")[0]} ({((session.user as any).role || "USER").substring(0, 1)})
+                <Link
+                  href="/account"
+                  aria-label={`Account: ${user.name || user.email}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "32px",
+                    height: "32px",
+                    background: "#000",
+                    color: "#fff",
+                    fontWeight: 900,
+                    fontSize: "0.75rem",
+                    textDecoration: "none",
+                    letterSpacing: "0.05em",
+                    flexShrink: 0,
+                  }}
+                  title={`${user.name || user.email} (${role})`}
+                >
+                  {(user.name || user.email || "U").charAt(0).toUpperCase()}
                 </Link>
-              </div>
+              </>
             ) : (
-              <Link href="/login" className="etw-btn text-xs px-3 py-1">
+              <Link
+                href="/login"
+                style={{
+                  fontSize: "0.6875rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  textDecoration: "none",
+                  border: "2px solid #000",
+                  padding: "0.375rem 0.875rem",
+                  color: "#000",
+                  transition: "background 0.15s, color 0.15s",
+                }}
+                className="etw-btn"
+              >
                 SIGN IN
               </Link>
             )}
@@ -145,7 +227,7 @@ export function Header({ session }: { session?: any }) {
             lineHeight: 1,
           }}
         >
-          {menuOpen ? "âœ•" : "â˜°"}
+          {menuOpen ? "✕" : "☰"}
         </button>
       </div>
 
@@ -160,11 +242,13 @@ export function Header({ session }: { session?: any }) {
             background: "#fff",
           }}
         >
-          {NAV_LINKS.map((link) => {
-            const isActive =
-              link.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(link.href);
+          {[
+            { href: "/rover", label: "ROVER" },
+            { href: "/contributor", label: "CONTRIBUTOR" },
+            { href: "/de-basement", label: "DE BASEMENT" },
+            { href: "/methodology", label: "METHODOLOGY" },
+          ].map((link) => {
+            const isActive = pathname.startsWith(link.href);
             return (
               <Link
                 key={link.href}
@@ -187,6 +271,82 @@ export function Header({ session }: { session?: any }) {
               </Link>
             );
           })}
+
+          {/* Mobile auth */}
+          {user ? (
+            <>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    display: "block",
+                    padding: "1rem 1.5rem",
+                    fontSize: "0.875rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    textDecoration: "none",
+                    color: "var(--color-text-muted)",
+                    borderBottom: "1px solid var(--color-border)",
+                  }}
+                >
+                  ADMIN DASHBOARD
+                </Link>
+              )}
+              <Link
+                href="/account"
+                onClick={() => setMenuOpen(false)}
+                style={{
+                  display: "block",
+                  padding: "1rem 1.5rem",
+                  fontSize: "0.875rem",
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  color: "#000",
+                  borderBottom: "1px solid var(--color-border)",
+                }}
+              >
+                MY ACCOUNT ({user.name || user.email})
+              </Link>
+              <button
+                onClick={() => { setMenuOpen(false); signOut({ callbackUrl: "/" }); }}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "1rem 1.5rem",
+                  fontSize: "0.875rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  background: "none",
+                  border: "none",
+                  borderBottom: "1px solid var(--color-border)",
+                  cursor: "pointer",
+                  color: "var(--color-text-muted)",
+                }}
+              >
+                SIGN OUT
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              onClick={() => setMenuOpen(false)}
+              style={{
+                display: "block",
+                padding: "1rem 1.5rem",
+                fontSize: "0.875rem",
+                fontWeight: 700,
+                textDecoration: "none",
+                color: "#000",
+                borderBottom: "1px solid var(--color-border)",
+              }}
+            >
+              SIGN IN
+            </Link>
+          )}
         </nav>
       )}
 
@@ -201,4 +361,3 @@ export function Header({ session }: { session?: any }) {
     </header>
   );
 }
-
