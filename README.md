@@ -68,12 +68,27 @@ ETW is a financial and socioeconomic transparency web platform. It aggregates pu
 ## Data Sources & Integrity
 
 - **Official Data First**: Every data point on the platform requires a cited source URL.
-- **World Bank API**: Integrated via `scripts/ingest-worldbank.ts`.
-- **Manual Data**: Wealth estimates (UBS, Forbes) lack a free API and require manual insertion via Prisma Studio or Admin tools.
+- **World Bank API & IMF DataMapper**: Integrated via `npm run ingest:all`.
 - **Sample Data**: The seed script populates the database with some Sample NGOs and Illustrative De Basement cases for development purposes. These are flagged with specific status badges on the frontend.
+
+### Data I must supply manually
+Some wealth and index indicators do not have reliable free APIs. You must prepare a CSV file and run `npm run import:csv path/to/file.csv` to import them.
+
+The CSV must have these headers:
+`indicator_slug, country_code, year, value, unit, source_name, source_url, notes`
+
+**Indicators requiring manual CSV imports:**
+1. **Wealth per Adult (Median)** (slug: `wealth-per-adult`)
+   - **Source**: Credit Suisse Global Wealth Report / UBS Global Wealth Report
+   - **URL**: Provide the specific report URL for the year.
+2. **Human Development Index (HDI)** (slug: `hdi`)
+   - **Source**: UNDP Human Development Report
+   - **URL**: https://hdr.undp.org/data-center
+3. **People Net Worth Profiles**
+   - Individual profiles (net worth, companies) must be entered manually via Prisma Studio (`npm run db:studio`) or the Admin panel. Use Forbes or Bloomberg Billionaires Index.
 
 ## Design System
 - Strictly monochrome: #FFF background, #000 text.
-- No gradients, shadows, or heavy animations.
+- No gradients, shadows, or heavy animations. (Exception: The globe heatmap).
 - Font: Inter (from Google Fonts).
 - Components utilize thick borders, uppercase tracking, and stark contrasts to convey a robust, investigative feel.

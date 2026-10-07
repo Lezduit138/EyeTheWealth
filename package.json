@@ -12,13 +12,17 @@
     "db:studio": "prisma studio",
     "db:seed": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/seed.ts",
     "db:push": "prisma db push",
-    "ingest:worldbank": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/ingest-worldbank.ts"
+    "ingest:all": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/ingest-worldbank.ts",
+    "ingest:worldbank": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/ingest-worldbank.ts",
+    "migrate:indicators": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/migrate-indicators.ts",
+    "import:csv": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/import-indicators-csv.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
     "@prisma/client": "^6.7.0",
     "axios": "^1.9.0",
     "bcryptjs": "^3.0.3",
+    "csv-parse": "^7.0.3",
     "next": "16.3.8",
     "next-auth": "^5.0.0-beta.32",
     "node-cron": "^3.0.3",

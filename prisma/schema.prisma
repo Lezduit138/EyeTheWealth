@@ -42,14 +42,47 @@ model Country {
   longitude   Float?
   latitude    Float?
   flagEmoji   String?
+  population  Float?      // latest known population
+  isAggregate Boolean     @default(false) // true = World Bank aggregate/group, skip in globe
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
   dataPoints  DataPoint[]
   comparisons CompareSelection[]
+  regionMemberships RegionCountry[]
 
   @@index([code])
   @@index([name])
+  @@index([isAggregate])
+}
+
+// Region/Group: World Bank regions, income groups, UN sub-regions
+model Region {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  // Type: "wb_region" | "wb_income" | "un_subregion" | "continent" | "custom"
+  type        String
+  description String?
+  wbCode      String?  // World Bank aggregate code (e.g. "SSA")
+  createdAt   DateTime @default(now())
+
+  countries   RegionCountry[]
+
+  @@index([slug])
+  @@index([type])
+}
+
+model RegionCountry {
+  id        String  @id @default(cuid())
+  regionId  String
+  region    Region  @relation(fields: [regionId], references: [id])
+  countryId String
+  country   Country @relation(fields: [countryId], references: [id])
+
+  @@unique([regionId, countryId])
+  @@index([regionId])
+  @@index([countryId])
 }
 
 model Category {
@@ -64,56 +97,67 @@ model Category {
 }
 
 model Indicator {
-  id              String           @id @default(cuid())
-  name            String
-  slug            String           @unique
-  categoryId      String
-  category        Category         @relation(fields: [categoryId], references: [id])
-  definition      String           // What this indicator measures
-  methodology     String?          // How it is calculated
-  unit            String           // e.g. "% of GDP", "USD", "per 1,000 live births"
-  worldBankCode   String?          // e.g. "NY.GDP.MKTP.CD"
-  imfCode         String?
-  whoCode         String?
-  oecdCode        String?
-  isWealth        Boolean          @default(false) // Wealth indicators need manual data
-  displayOrder    Int              @default(0)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id                String            @id @default(cuid())
+  name              String
+  slug              String            @unique
+  categoryId        String
+  category          Category          @relation(fields: [categoryId], references: [id])
+  definition        String            // What this indicator measures
+  methodology       String?           // How it is calculated
+  unit              String            // e.g. "% of GDP", "USD", "per 1,000 live births"
+  displayUnit       String?           // Shorter display unit, e.g. "$" or "per 1k"
+  // Polarity: "POSITIVE" | "NEGATIVE" | "NEUTRAL"
+  polarity          String            @default("NEUTRAL")
+  polarityRationale String?           // Why high/low is good/bad/neutral
+  worldBankCode     String?           // e.g. "NY.GDP.MKTP.CD"
+  imfCode           String?           // IMF DataMapper indicator code
+  whoCode           String?
+  oecdCode          String?
+  isWealth          Boolean           @default(false) // Wealth indicators need manual data
+  hasManualData     Boolean           @default(false) // true = populated via CSV import
+  displayOrder      Int               @default(0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
-  dataPoints      DataPoint[]
-  interpretations EtwInterpretation[]
+  dataPoints        DataPoint[]
+  interpretations   EtwInterpretation[]
   compareSelections CompareSelection[]
 
   @@index([categoryId])
   @@index([slug])
+  @@index([worldBankCode])
+  @@index([imfCode])
 }
 
 model DataPoint {
-  id               String   @id @default(cuid())
-  indicatorId      String
-  indicator        Indicator @relation(fields: [indicatorId], references: [id])
-  countryId        String
-  country          Country   @relation(fields: [countryId], references: [id])
-  value            Float?    // null = "Not publicly disclosed"
-  unit             String?
-  year             Int
-  sourceId         String?
-  source           Source?   @relation(fields: [sourceId], references: [id])
-  sourceUrl        String?
-  collectionDate   DateTime?
-  // VerificationStatus: VERIFIED | UNVERIFIED | ESTIMATED | NOT_DISCLOSED | SAMPLE
-  verificationStatus String  @default("UNVERIFIED")
-  isSampleData     Boolean   @default(false)
-  notes            String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  indicatorId        String
+  indicator          Indicator @relation(fields: [indicatorId], references: [id])
+  countryId          String
+  country            Country   @relation(fields: [countryId], references: [id])
+  value              Float?    // null = "Not publicly disclosed"
+  unit               String?
+  year               Int
+  sourceId           String?
+  source             Source?   @relation(fields: [sourceId], references: [id])
+  sourceUrl          String?   // Exact URL to the data series/page
+  collectionDate     DateTime? // When ETW fetched this
+  fetchedFromUrl     String?   // Exact API URL used (for audit)
+  // VerificationStatus: OFFICIAL | ESTIMATED | NOT_DISCLOSED | SAMPLE | UNVERIFIED
+  verificationStatus String    @default("UNVERIFIED")
+  isProjection       Boolean   @default(false) // IMF projected years
+  isSampleData       Boolean   @default(false)
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@unique([indicatorId, countryId, year, sourceId])
   @@index([countryId])
   @@index([indicatorId])
   @@index([year])
   @@index([verificationStatus])
+  @@index([indicatorId, year]) // For map/choropleth queries
+  @@index([countryId, indicatorId]) // For country profiles
 }
 
 model Source {
@@ -526,4 +570,59 @@ model CorrectionRequest {
   updatedAt DateTime @updatedAt
 
   @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROVER — INDIVIDUAL WEALTH (People)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Person {
+  id             String           @id @default(cuid())
+  name           String
+  slug           String           @unique
+  nationality    String?
+  birthYear      Int?
+  description    String?
+  isSampleData   Boolean          @default(true)
+  isPublicFigure Boolean          @default(false)
+  sourceUrl      String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  netWorthHistory PersonNetWorth[]
+  companies       PersonCompany[]
+
+  @@index([slug])
+  @@index([nationality])
+}
+
+model PersonNetWorth {
+  id           String   @id @default(cuid())
+  personId     String
+  person       Person   @relation(fields: [personId], references: [id])
+  year         Int
+  value        Float
+  currency     String   @default("USD")
+  isEstimate   Boolean  @default(true)
+  sourceName   String
+  sourceUrl    String
+  methodology  String?
+  notes        String?
+  isSampleData Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  @@index([personId])
+  @@index([year])
+}
+
+model PersonCompany {
+  id           String  @id @default(cuid())
+  personId     String
+  person       Person  @relation(fields: [personId], references: [id])
+  companyName  String
+  role         String?
+  stakePercent Float?
+  sourceUrl    String?
+
+  @@index([personId])
 }
