@@ -326,7 +326,7 @@ export default function ClientDashboard({ categories }: { categories: any[] }) {
                 countryCode={selectedCountry || "IND"}
                 level={currentLevel}
                 parentPlaceId={activePlace?.id}
-                selectedPlaceSlug={activePlace?.slug}
+                activePlace={activePlace}
                 onSelectPlace={handlePlaceSelect}
                 colorBlindMode={colorBlindMode}
               />
