@@ -3,386 +3,379 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ExternalLink, ShieldCheck, AlertTriangle, Building2, HeartHandshake, Database, Info } from "lucide-react";
+import {
+  ExternalLink, ShieldCheck, AlertTriangle, Building2,
+  HeartHandshake, Info, X, TrendingUp, BarChart2,
+  FileText, Users, Globe,
+} from "lucide-react";
 
 interface AreaPanelProps {
-  placeId: string;
-  placeSlug: string;
-  placeName: string;
+  placeId:    string;
+  placeSlug:  string;
+  placeName:  string;
   placeLevel: string;
-  onClose: () => void;
+  onClose:    () => void;
 }
 
-export default function AreaPanel({
-  placeId,
-  placeSlug,
-  placeName,
-  placeLevel,
-  onClose,
-}: AreaPanelProps) {
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "assets" | "deprivation" | "factors" | "ngos" | "individuals" | "sources"
-  >("overview");
+type TabId = "overview" | "assets" | "deprivation" | "factors" | "ngos" | "individuals" | "sources";
 
-  const [loading, setLoading] = useState(false);
-  const [assetsData, setAssetsData] = useState<any>(null);
-  const [deprivationData, setDeprivationData] = useState<any>(null);
-  const [factorsData, setFactorsData] = useState<any>(null);
-  const [ngosData, setNgosData] = useState<any>(null);
-  const [individualsData, setIndividualsData] = useState<any>(null);
+const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
+  { id: "overview",    label: "Overview",         icon: <Globe size={12} /> },
+  { id: "assets",      label: "Assets",           icon: <TrendingUp size={12} /> },
+  { id: "deprivation", label: "Deprivation",      icon: <BarChart2 size={12} /> },
+  { id: "factors",     label: "Factors",          icon: <Info size={12} /> },
+  { id: "ngos",        label: "NGOs",             icon: <Building2 size={12} /> },
+  { id: "individuals", label: "Individuals",      icon: <Users size={12} /> },
+  { id: "sources",     label: "Sources",          icon: <FileText size={12} /> },
+];
 
-  // Fetch Area Data
+function StatBox({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div style={{ border: "1px solid #000", padding: "10px 12px", background: "#fff" }}>
+      <div style={{ fontSize: 9, fontFamily: "monospace", color: "#666", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>
+        {label}
+      </div>
+      <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 16, color: "#000", lineHeight: 1.1 }}>
+        {value}
+      </div>
+      {sub && (
+        <div style={{ fontSize: 9, color: "#888", fontFamily: "monospace", marginTop: 3 }}>{sub}</div>
+      )}
+    </div>
+  );
+}
+
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <div style={{ fontFamily: "monospace", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, color: "#000", borderBottom: "2px solid #000", paddingBottom: 4, marginBottom: 10 }}>
+      {title}
+    </div>
+  );
+}
+
+function NotDisclosedBadge({ level }: { level: string }) {
+  return (
+    <div style={{ fontFamily: "monospace", fontSize: 10, color: "#888", fontStyle: "italic", background: "#f4f4f4", border: "1px dashed #bbb", padding: "5px 8px" }}>
+      Not publicly disclosed at {level} level
+    </div>
+  );
+}
+
+export default function AreaPanel({ placeId, placeSlug, placeName, placeLevel, onClose }: AreaPanelProps) {
+  const [activeTab, setActiveTab]         = useState<TabId>("overview");
+  const [loading, setLoading]             = useState(false);
+  const [assetsData, setAssetsData]       = useState<any>(null);
+  const [deprivData, setDeprivData]       = useState<any>(null);
+  const [factorsData, setFactorsData]     = useState<any>(null);
+  const [ngosData, setNgosData]           = useState<any>(null);
+  const [individualsData, setIndivData]   = useState<any>(null);
+
   useEffect(() => {
-    async function fetchAreaData() {
-      setLoading(true);
-      try {
-        const [assetsRes, depRes, factorsRes, ngosRes, indRes] = await Promise.all([
-          fetch(`/api/v1/rover/assets?slug=${encodeURIComponent(placeSlug)}`).then((r) => r.json()),
-          fetch(`/api/v1/rover/deprivation?slug=${encodeURIComponent(placeSlug)}`).then((r) => r.json()),
-          fetch(`/api/v1/rover/factors?slug=${encodeURIComponent(placeSlug)}`).then((r) => r.json()),
-          fetch(`/api/v1/rover/ngos?slug=${encodeURIComponent(placeSlug)}`).then((r) => r.json()),
-          fetch(`/api/v1/rover/individuals?slug=${encodeURIComponent(placeSlug)}`).then((r) => r.json()),
-        ]);
-
-        if (assetsRes.success) setAssetsData(assetsRes.data);
-        if (depRes.success) setDeprivationData(depRes.data);
-        if (factorsRes.success) setFactorsData(factorsRes.data);
-        if (ngosRes.success) setNgosData(ngosRes.data);
-        if (indRes.success) setIndividualsData(indRes.data);
-      } catch (err) {
-        console.error("Failed loading area data:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchAreaData();
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([
+      fetch(`/api/v1/rover/assets?slug=${encodeURIComponent(placeSlug)}`).then(r => r.json()),
+      fetch(`/api/v1/rover/deprivation?slug=${encodeURIComponent(placeSlug)}`).then(r => r.json()),
+      fetch(`/api/v1/rover/factors?slug=${encodeURIComponent(placeSlug)}`).then(r => r.json()),
+      fetch(`/api/v1/rover/ngos?slug=${encodeURIComponent(placeSlug)}`).then(r => r.json()),
+      fetch(`/api/v1/rover/individuals?slug=${encodeURIComponent(placeSlug)}`).then(r => r.json()),
+    ]).then(([a, d, f, n, i]) => {
+      if (cancelled) return;
+      if (a.success) setAssetsData(a.data);
+      if (d.success) setDeprivData(d.data);
+      if (f.success) setFactorsData(f.data);
+      if (n.success) setNgosData(n.data);
+      if (i.success) setIndivData(i.data);
+    }).catch(err => console.error("[AreaPanel] fetch error", err))
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [placeSlug]);
 
-  const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "assets", label: "Assets & Wealth" },
-    { id: "deprivation", label: "Poverty & Deprivation" },
-    { id: "factors", label: "Factors" },
-    { id: "ngos", label: "NGOs" },
-    { id: "individuals", label: "Individuals" },
-    { id: "sources", label: "Sources" },
-  ];
-
   return (
-    <div className="w-[420px] flex-shrink-0 border-l border-black bg-white flex flex-col z-20 font-sans h-full shadow-lg">
-      {/* Header */}
-      <div className="p-4 border-b border-black bg-black text-white flex justify-between items-center">
+    <div style={{
+      width: 420, flexShrink: 0, borderLeft: "1px solid #000",
+      background: "#fff", display: "flex", flexDirection: "column",
+      height: "100%", overflowY: "hidden", fontFamily: "sans-serif",
+    }}>
+      {/* ── Header ────────────────────────────────────────────── */}
+      <div style={{ background: "#000", color: "#fff", padding: "14px 16px", borderBottom: "1px solid #000", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] uppercase tracking-widest text-white bg-gray-800 px-1.5 py-0.5 font-mono border border-gray-600">
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <span style={{ fontSize: 9, fontFamily: "monospace", textTransform: "uppercase", letterSpacing: 2, background: "#333", border: "1px solid #555", padding: "1px 6px", color: "#fff" }}>
               {placeLevel}
             </span>
-            <span className="text-[10px] text-gray-400 font-mono">
-              Vintage: 2011/2021
-            </span>
+            <span style={{ fontSize: 9, fontFamily: "monospace", color: "#888" }}>Census 2011 / NFHS-5</span>
           </div>
-          <h2 className="font-bold text-lg leading-tight tracking-tight text-white">{placeName}</h2>
+          <h2 style={{ fontWeight: 700, fontSize: 18, lineHeight: 1.2, margin: 0, color: "#fff", letterSpacing: -0.5 }}>
+            {placeName}
+          </h2>
         </div>
         <button
           onClick={onClose}
-          className="text-white hover:bg-gray-800 font-mono text-sm px-2.5 py-1 border border-white transition-colors"
-          title="Close panel"
+          style={{ background: "transparent", border: "1px solid #555", color: "#fff", width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+          title="Close"
         >
-          ✕
+          <X size={14} />
         </button>
       </div>
 
-      {/* Tabs navigation */}
-      <div className="flex border-b border-black overflow-x-auto text-xs font-mono bg-gray-50 scrollbar-none">
-        {tabs.map((t) => (
+      {/* ── Tab bar ────────────────────────────────────────────── */}
+      <div style={{ display: "flex", borderBottom: "1px solid #000", overflowX: "auto", background: "#fafafa", flexShrink: 0 }}>
+        {TABS.map(t => (
           <button
             key={t.id}
-            onClick={() => setActiveTab(t.id as any)}
-            className={`px-3 py-2.5 whitespace-nowrap border-r border-black font-semibold transition-colors ${
-              activeTab === t.id
-                ? "bg-white text-black font-bold border-b-2 border-b-black shadow-[inset_0_-2px_0_#000]"
-                : "text-gray-600 hover:text-black hover:bg-gray-100"
-            }`}
+            onClick={() => setActiveTab(t.id)}
+            style={{
+              display: "flex", alignItems: "center", gap: 5,
+              padding: "8px 11px", whiteSpace: "nowrap",
+              fontSize: 11, fontFamily: "monospace", fontWeight: activeTab === t.id ? 700 : 400,
+              background: activeTab === t.id ? "#fff" : "transparent",
+              color: activeTab === t.id ? "#000" : "#555",
+              border: "none", borderRight: "1px solid #e0e0e0",
+              borderBottom: activeTab === t.id ? "2px solid #000" : "2px solid transparent",
+              cursor: "pointer", transition: "all 0.1s",
+            }}
           >
-            {t.label}
+            {t.icon} {t.label}
           </button>
         ))}
       </div>
 
-      {/* Tab Content */}
-      <div className="flex-grow overflow-y-auto p-4 text-xs font-sans bg-white">
+      {/* ── Content ───────────────────────────────────────────── */}
+      <div style={{ flexGrow: 1, overflowY: "auto", padding: 16 }}>
         {loading ? (
-          <div className="font-mono text-gray-500 py-12 text-center flex flex-col items-center justify-center gap-2">
-            <div className="w-5 h-5 border-2 border-black border-t-transparent animate-spin"></div>
-            <span>Fetching real public data...</span>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 200, gap: 10, fontFamily: "monospace", fontSize: 12, color: "#555" }}>
+            <div style={{ width: 22, height: 22, border: "2px solid #000", borderTop: "2px solid transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+            Fetching public data…
           </div>
         ) : (
           <>
-            {/* OVERVIEW TAB */}
+            {/* ── OVERVIEW ─────────────────────────────────────── */}
             {activeTab === "overview" && (
-              <div className="flex flex-col gap-4">
-                <div className={`border border-black p-3.5 ${deprivationData?.isFlagged ? "bg-red-50/50" : "bg-gray-50"}`}>
-                  <div className="font-mono text-[10px] text-gray-600 uppercase mb-1">Status Summary</div>
-                  <div className="font-bold text-sm mb-1.5 flex items-center gap-1.5">
-                    {deprivationData?.isFlagged ? (
-                      <>
-                        <AlertTriangle size={15} className="text-red-700" />
-                        <span className="text-red-800">Deprivation indicators present</span>
-                      </>
-                    ) : (
-                      <>
-                        <ShieldCheck size={15} className="text-black" />
-                        <span>Baseline standards met</span>
-                      </>
-                    )}
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {/* Status */}
+                <div style={{ border: `1px solid ${deprivData?.isFlagged ? "#c00" : "#000"}`, padding: 12, background: deprivData?.isFlagged ? "#fff5f5" : "#fff" }}>
+                  <div style={{ fontFamily: "monospace", fontSize: 9, color: "#666", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>
+                    Rule-Engine Verdict
                   </div>
-                  <p className="text-gray-800 text-xs leading-relaxed">{deprivationData?.summaryText}</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
+                    {deprivData?.isFlagged
+                      ? <><AlertTriangle size={16} color="#c00" /> <span style={{ color: "#c00" }}>Deprivation indicators present</span></>
+                      : <><ShieldCheck size={16} /> Baseline standards met</>
+                    }
+                  </div>
+                  <p style={{ fontSize: 12, color: "#444", lineHeight: 1.6, margin: 0 }}>{deprivData?.summaryText}</p>
                 </div>
 
-                {/* Key Quick Stats */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="border border-black p-2.5 bg-white">
-                    <div className="text-[10px] text-gray-500 font-mono uppercase">Finest Level</div>
-                    <div className="font-bold text-sm capitalize">{placeLevel}</div>
-                  </div>
-                  <div className="border border-black p-2.5 bg-white">
-                    <div className="text-[10px] text-gray-500 font-mono uppercase">Parent Unit</div>
-                    <div className="font-bold text-sm truncate">{assetsData?.parent?.name || "India"}</div>
-                  </div>
+                {/* Quick stat grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <StatBox label="Resolution level" value={placeLevel.toUpperCase()} />
+                  <StatBox label="Parent unit"      value={assetsData?.parent?.name ?? "India"} />
                 </div>
 
-                <div className="border border-black p-3 bg-gray-50">
-                  <div className="font-bold mb-2 uppercase text-[11px] font-mono flex items-center gap-1">
-                    <Info size={12} /> Data Resolution Principles
+                {/* ETW data rule notice */}
+                <div style={{ border: "1px solid #ddd", padding: 12, background: "#fafafa" }}>
+                  <div style={{ fontFamily: "monospace", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
+                    <Info size={12} /> ETW Data Integrity Rule
                   </div>
-                  <p className="text-[11px] text-gray-700 leading-relaxed">
-                    ETW adheres to the <strong>strict zero-downscaling rule</strong>. National and state metrics (such as gold reserves or state GDP) are shown exclusively at their published measurement level. If not officially published for this level, the metric is labelled <em>&quot;Not publicly disclosed&quot;</em>.
+                  <p style={{ fontSize: 11, color: "#555", lineHeight: 1.6, margin: 0 }}>
+                    National/state-level aggregates (e.g. gold reserves, GSDP) are only shown at their <strong>officially published measurement level</strong>. If a statistic is not published for this level, it is labelled <em>"Not publicly disclosed"</em>. ETW never apportions or downscales.
                   </p>
                 </div>
               </div>
             )}
 
-            {/* ASSETS & WEALTH COMPOSITION TAB */}
+            {/* ── ASSETS ───────────────────────────────────────── */}
             {activeTab === "assets" && (
-              <div className="flex flex-col gap-3">
-                <div className="text-[11px] text-gray-700 bg-gray-50 border border-gray-200 p-2 font-mono">
-                  Extensible asset categories derived from official public datasets. No arbitrary composite total wealth score.
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ fontFamily: "monospace", fontSize: 10, color: "#555", background: "#f4f4f4", border: "1px solid #ddd", padding: 8 }}>
+                  Official public datasets only. No composite wealth score; no apportioning from higher levels.
                 </div>
 
-                {assetsData?.assetComposition?.map((cat: any) => (
-                  <div key={cat.categoryId} className="border border-black p-3.5 bg-white hover:border-gray-800 transition-all shadow-sm">
-                    <div className="flex justify-between items-start gap-2 mb-1.5">
-                      <div className="font-bold text-xs uppercase tracking-wider">{cat.categoryName}</div>
-                      <span className={`text-[9px] font-mono uppercase px-1.5 py-0.5 border ${
-                        cat.status === "MEASURED"
-                          ? "border-black bg-black text-white"
-                          : "border-gray-400 bg-gray-100 text-gray-600"
-                      }`}>
-                        {cat.resolutionLabel}
-                      </span>
-                    </div>
+                {(!assetsData?.assetComposition || assetsData.assetComposition.length === 0) ? (
+                  <div style={{ border: "1px solid #000", padding: 24, textAlign: "center", fontFamily: "monospace", fontSize: 12, color: "#777" }}>
+                    No publicly-disclosed asset-level data for this unit.
+                  </div>
+                ) : (
+                  assetsData.assetComposition.map((cat: any) => (
+                    <div key={cat.categoryId} style={{ border: "1px solid #000", padding: 14, background: "#fff" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <span style={{ fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>{cat.categoryName}</span>
+                        <span style={{
+                          fontSize: 9, fontFamily: "monospace", textTransform: "uppercase",
+                          padding: "2px 6px", border: "1px solid",
+                          background: cat.status === "MEASURED" ? "#000" : "#f4f4f4",
+                          color:      cat.status === "MEASURED" ? "#fff" : "#888",
+                          borderColor: cat.status === "MEASURED" ? "#000" : "#ccc",
+                        }}>
+                          {cat.resolutionLabel}
+                        </span>
+                      </div>
 
-                    <div className="my-2.5">
                       {cat.status === "MEASURED" ? (
-                        <div className="flex items-baseline gap-2">
-                          <span className="font-mono text-lg font-bold text-black">
-                            {cat.value?.toLocaleString()}
-                          </span>
-                          <span className="font-mono text-xs text-gray-700 font-medium">
-                            {cat.unit}
-                          </span>
-                          {cat.isEstimate && (
-                            <span className="text-[10px] font-mono text-gray-500">(Estimated)</span>
-                          )}
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
+                          <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 20 }}>{cat.value?.toLocaleString()}</span>
+                          <span style={{ fontFamily: "monospace", fontSize: 12, color: "#555" }}>{cat.unit}</span>
+                          {cat.isEstimate && <span style={{ fontSize: 10, color: "#888" }}>(Estimate)</span>}
                         </div>
                       ) : (
-                        <div className="font-mono text-xs text-gray-500 italic bg-gray-50 p-1.5 border border-dashed border-gray-300">
-                          Not publicly disclosed at {placeLevel} level
+                        <NotDisclosedBadge level={placeLevel} />
+                      )}
+
+                      {cat.sourceName && (
+                        <div style={{ borderTop: "1px solid #eee", marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between", fontSize: 10, fontFamily: "monospace", color: "#666" }}>
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }} title={cat.sourceName}>
+                            {cat.sourceName} ({cat.year ?? "Official"})
+                          </span>
+                          {cat.sourceUrl && (
+                            <a href={cat.sourceUrl} target="_blank" rel="noreferrer" style={{ color: "#000", fontWeight: 700, textDecoration: "underline", display: "flex", alignItems: "center", gap: 3 }}>
+                              Verify <ExternalLink size={9} />
+                            </a>
+                          )}
                         </div>
                       )}
                     </div>
-
-                    {cat.sourceName ? (
-                      <div className="mt-2 pt-2 border-t border-gray-200 flex justify-between items-center text-[10px] text-gray-600 font-mono">
-                        <span className="truncate max-w-[200px]" title={cat.sourceName}>
-                          Source: {cat.sourceName} ({cat.year || "Official"})
-                        </span>
-                        <a
-                          href={cat.sourceUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="underline inline-flex items-center gap-0.5 text-black hover:text-gray-600 font-bold"
-                        >
-                          Verify Source <ExternalLink size={9} />
-                        </a>
-                      </div>
-                    ) : (
-                      <div className="mt-2 pt-2 border-t border-gray-200 text-[9px] text-gray-400 font-mono">
-                        No sub-national disaggregation disclosed in public filings.
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             )}
 
-            {/* POVERTY & DEPRIVATION TAB */}
+            {/* ── DEPRIVATION ──────────────────────────────────── */}
             {activeTab === "deprivation" && (
-              <div className="flex flex-col gap-4">
-                <div className="border border-black p-3.5 bg-white">
-                  <div className="font-mono text-[10px] uppercase text-gray-500 mb-1">Rule Engine Verdict</div>
-                  <div className="font-bold text-sm mb-2">{deprivationData?.deprivationStatus}</div>
-                  <div className="text-gray-800 text-xs mb-3">{deprivationData?.summaryText}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ border: "1px solid #000", padding: 14 }}>
+                  <SectionHeader title="Rule Engine Verdict" />
+                  <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{deprivData?.deprivationStatus}</div>
+                  <p style={{ fontSize: 12, color: "#444", lineHeight: 1.6, marginBottom: 10 }}>{deprivData?.summaryText}</p>
 
-                  <div className="font-mono text-[10px] bg-gray-100 p-2.5 border border-black flex flex-col gap-1">
-                    <div className="font-bold mb-1 border-b border-gray-300 pb-1">
-                      Rule: {deprivationData?.ruleName}
-                    </div>
-                    <div>MPI Headcount Threshold: {deprivationData?.ruleThresholds?.mpiBaseline}</div>
-                    <div>Literacy Threshold: {deprivationData?.ruleThresholds?.literacyBaseline}</div>
-                    <div>Sanitation Access Threshold: {deprivationData?.ruleThresholds?.sanitationBaseline}</div>
+                  <div style={{ background: "#f4f4f4", border: "1px solid #000", padding: 10, fontFamily: "monospace", fontSize: 10 }}>
+                    <div style={{ fontWeight: 700, marginBottom: 5, borderBottom: "1px solid #ccc", paddingBottom: 4 }}>{deprivData?.ruleName}</div>
+                    <div>MPI Threshold: <strong>{deprivData?.ruleThresholds?.mpiBaseline}</strong></div>
+                    <div>Literacy Threshold: <strong>{deprivData?.ruleThresholds?.literacyBaseline}</strong></div>
+                    <div>Sanitation Threshold: <strong>{deprivData?.ruleThresholds?.sanitationBaseline}</strong></div>
                   </div>
                 </div>
 
-                <div className="border border-black p-3.5 bg-white">
-                  <div className="font-bold uppercase text-[11px] font-mono mb-2">Weak Dimensions Evaluated</div>
-                  {deprivationData?.weakDimensions?.length === 0 ? (
-                    <div className="text-gray-500 italic py-2">
-                      All published dimensions meet baseline national thresholds.
-                    </div>
+                <div style={{ border: "1px solid #000", padding: 14 }}>
+                  <SectionHeader title="Weak Dimensions" />
+                  {(!deprivData?.weakDimensions || deprivData.weakDimensions.length === 0) ? (
+                    <div style={{ color: "#777", fontStyle: "italic", fontSize: 12 }}>All published dimensions meet baseline thresholds.</div>
                   ) : (
-                    <div className="flex flex-col gap-2">
-                      {deprivationData?.weakDimensions?.map((w: any, idx: number) => (
-                        <div key={idx} className="border-l-4 border-l-black pl-2.5 py-1.5 bg-gray-50 border border-r-0 border-t-0 border-b-0">
-                          <div className="font-bold text-xs">{w.dimension}</div>
-                          <div className="font-mono text-[11px] text-gray-800 mt-0.5">
-                            {w.indicator}: <span className="font-bold">{w.value}%</span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {deprivData.weakDimensions.map((w: any, i: number) => (
+                        <div key={i} style={{ borderLeft: "3px solid #000", paddingLeft: 10, paddingTop: 4, paddingBottom: 4 }}>
+                          <div style={{ fontWeight: 700, fontSize: 12 }}>{w.dimension}</div>
+                          <div style={{ fontFamily: "monospace", fontSize: 11, color: "#333", marginTop: 2 }}>
+                            {w.indicator}: <strong>{w.value}%</strong>
                           </div>
-                          <div className="text-[10px] font-mono text-gray-500">Benchmark: {w.benchmark}</div>
+                          <div style={{ fontFamily: "monospace", fontSize: 10, color: "#666" }}>Benchmark: {w.benchmark}</div>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
 
-                <div className="text-[10px] text-gray-500 font-mono border-t border-gray-200 pt-2 italic leading-tight">
-                  {deprivationData?.interpretationDisclaimer}
-                </div>
+                {deprivData?.interpretationDisclaimer && (
+                  <div style={{ fontFamily: "monospace", fontSize: 10, color: "#888", fontStyle: "italic", borderTop: "1px solid #eee", paddingTop: 8 }}>
+                    {deprivData.interpretationDisclaimer}
+                  </div>
+                )}
               </div>
             )}
 
-            {/* FACTORS TAB */}
+            {/* ── FACTORS ──────────────────────────────────────── */}
             {activeTab === "factors" && (
-              <div className="flex flex-col gap-4">
-                <div className="font-mono text-[11px] uppercase font-bold tracking-wide">
-                  Factors That May Contribute
-                </div>
-                {factorsData?.factorsThatMayContribute?.length === 0 ? (
-                  <div className="text-gray-500 italic border border-black p-4 text-center">
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <SectionHeader title="Structural Factors" />
+                {(!factorsData?.factorsThatMayContribute || factorsData.factorsThatMayContribute.length === 0) ? (
+                  <div style={{ border: "1px solid #000", padding: 24, textAlign: "center", fontFamily: "monospace", fontSize: 12, color: "#777" }}>
                     No structural deprivation factors triggered for this locality.
                   </div>
                 ) : (
-                  factorsData?.factorsThatMayContribute?.map((f: any, idx: number) => (
-                    <div key={idx} className="border border-black p-3.5 bg-white shadow-sm">
-                      <div className="font-bold text-xs mb-1">{f.factorName}</div>
-                      <div className="font-mono text-[10px] text-gray-600 mb-2">
-                        Observed {f.indicator}: <span className="font-bold">{f.observedValue}</span>
+                  factorsData.factorsThatMayContribute.map((f: any, i: number) => (
+                    <div key={i} style={{ border: "1px solid #000", padding: 14, background: "#fff" }}>
+                      <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 4 }}>{f.factorName}</div>
+                      <div style={{ fontFamily: "monospace", fontSize: 11, color: "#555", marginBottom: 8 }}>
+                        Observed {f.indicator}: <strong>{f.observedValue}</strong>
                       </div>
-                      <p className="text-gray-800 text-xs leading-relaxed mb-3 bg-gray-50 p-2 border-l-2 border-l-black">
+                      <p style={{ fontSize: 12, color: "#333", lineHeight: 1.6, background: "#f9f9f9", borderLeft: "2px solid #000", padding: "6px 10px", marginBottom: 10 }}>
                         {f.hedgedExplanation}
                       </p>
-
-                      <div className="border-t border-gray-200 pt-2">
-                        <div className="font-mono text-[10px] uppercase font-bold text-gray-600 mb-1">
-                          Published Empirical Citations:
+                      {f.citations?.length > 0 && (
+                        <div>
+                          <div style={{ fontFamily: "monospace", fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "#666", marginBottom: 4 }}>Citations:</div>
+                          {f.citations.map((c: any, ci: number) => (
+                            <div key={ci} style={{ fontSize: 10, fontFamily: "monospace", color: "#444", marginBottom: 3, lineHeight: 1.4 }}>
+                              • <a href={c.url} target="_blank" rel="noreferrer" style={{ color: "#000", textDecoration: "underline", fontWeight: 600 }}>{c.title}</a> ({c.source}, {c.year})
+                            </div>
+                          ))}
                         </div>
-                        {f.citations?.map((c: any, cIdx: number) => (
-                          <div key={cIdx} className="text-[10px] text-gray-800 font-mono mb-1 leading-snug">
-                            • <a href={c.url} target="_blank" rel="noreferrer" className="underline font-medium hover:text-black">
-                              {c.title}
-                            </a> ({c.source}, {c.year})
-                          </div>
-                        ))}
-                      </div>
+                      )}
                     </div>
                   ))
                 )}
 
-                <div className="border border-black p-3 bg-gray-50">
-                  <div className="font-bold uppercase text-[10px] font-mono mb-1">What This Does Not Capture</div>
-                  <ul className="list-disc pl-4 text-[11px] text-gray-700 flex flex-col gap-1 leading-snug">
-                    {factorsData?.whatThisDoesNotCapture?.map((w: string, idx: number) => (
-                      <li key={idx}>{w}</li>
-                    ))}
-                  </ul>
-                </div>
+                {factorsData?.whatThisDoesNotCapture?.length > 0 && (
+                  <div style={{ border: "1px solid #ddd", padding: 12, background: "#fafafa" }}>
+                    <div style={{ fontFamily: "monospace", fontSize: 10, fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>What This Does Not Capture</div>
+                    <ul style={{ paddingLeft: 16, margin: 0 }}>
+                      {factorsData.whatThisDoesNotCapture.map((w: string, i: number) => (
+                        <li key={i} style={{ fontSize: 11, color: "#555", marginBottom: 3, lineHeight: 1.5 }}>{w}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-                <div className="text-[10px] text-gray-500 font-mono italic">
-                  {factorsData?.etwNotice}
-                </div>
+                {factorsData?.etwNotice && (
+                  <div style={{ fontFamily: "monospace", fontSize: 10, color: "#888", fontStyle: "italic" }}>{factorsData.etwNotice}</div>
+                )}
               </div>
             )}
 
-            {/* NGOS TAB */}
+            {/* ── NGOS ─────────────────────────────────────────── */}
             {activeTab === "ngos" && (
-              <div className="flex flex-col gap-3">
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {!ngosData?.coversRegion ? (
-                  <div className="border border-black p-6 text-center font-mono bg-gray-50">
-                    <Building2 className="mx-auto mb-2 text-gray-400" size={24} />
-                    <div className="font-bold mb-1">Regional Scope Notice</div>
-                    <div className="text-gray-600 text-xs">{ngosData?.regionNotice}</div>
+                  <div style={{ border: "1px solid #000", padding: 24, textAlign: "center", fontFamily: "monospace" }}>
+                    <Building2 size={24} style={{ margin: "0 auto 8px", color: "#888", display: "block" }} />
+                    <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 13 }}>Regional Scope Notice</div>
+                    <div style={{ fontSize: 12, color: "#666" }}>{ngosData?.regionNotice}</div>
                   </div>
                 ) : ngosData?.ngos?.length === 0 ? (
-                  <div className="border border-black p-6 text-center font-mono text-gray-600 bg-gray-50">
-                    <HeartHandshake className="mx-auto mb-2 text-gray-400" size={24} />
-                    <div className="font-bold text-black mb-1">No NGOs on record for this area yet</div>
-                    <p className="text-[11px] text-gray-500 mb-3">
-                      Directory currently covers registered entities with verified filings in Maharashtra.
-                    </p>
-                    <Link
-                      href="/contributor"
-                      className="inline-block border border-black px-3 py-1 bg-black text-white text-xs font-bold uppercase hover:bg-gray-800"
-                    >
-                      Browse Contributor Directory →
+                  <div style={{ border: "1px solid #000", padding: 24, textAlign: "center", fontFamily: "monospace" }}>
+                    <HeartHandshake size={24} style={{ margin: "0 auto 8px", color: "#888", display: "block" }} />
+                    <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 13 }}>No NGOs on record for this area</div>
+                    <p style={{ fontSize: 11, color: "#666", marginBottom: 12 }}>Directory covers registered entities with verified filings in Maharashtra.</p>
+                    <Link href="/contributor" style={{ display: "inline-block", border: "1px solid #000", padding: "5px 12px", background: "#000", color: "#fff", fontSize: 11, fontWeight: 700, textDecoration: "none", textTransform: "uppercase" }}>
+                      Contributor Directory →
                     </Link>
                   </div>
                 ) : (
                   <>
-                    <div className="bg-yellow-50 border border-black p-2.5 font-mono text-[10px] text-gray-800 flex items-start gap-1.5">
-                      <Info size={14} className="flex-shrink-0 mt-0.5" />
+                    <div style={{ background: "#fffbeb", border: "1px solid #000", padding: 8, fontFamily: "monospace", fontSize: 10, display: "flex", gap: 8, alignItems: "flex-start" }}>
+                      <Info size={14} style={{ flexShrink: 0, marginTop: 1 }} />
                       <span>{ngosData?.disclaimer}</span>
                     </div>
-
-                    <div className="text-[11px] font-mono text-gray-500 mb-1">
-                      Showing {ngosData?.ngos?.length} verified organisations active in region:
+                    <div style={{ fontFamily: "monospace", fontSize: 10, color: "#666" }}>
+                      Showing {ngosData?.ngos?.length} verified organisations:
                     </div>
-
-                    {ngosData?.ngos?.map((ngo: any) => (
-                      <div key={ngo.id} className="border border-black p-3.5 bg-white hover:border-gray-800 transition-all shadow-sm">
-                        <div className="font-bold text-xs mb-1 text-black">{ngo.name}</div>
-                        <div className="text-[10px] font-mono text-gray-600 mb-2 flex flex-wrap gap-1">
-                          <span className="font-bold text-black">{ngo.district || "Maharashtra"}</span>
+                    {ngosData.ngos.map((ngo: any) => (
+                      <div key={ngo.id} style={{ border: "1px solid #000", padding: 14 }}>
+                        <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 4 }}>{ngo.name}</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, fontSize: 10, fontFamily: "monospace", color: "#555", marginBottom: 6 }}>
+                          <span style={{ fontWeight: 700, color: "#000" }}>{ngo.district ?? "Maharashtra"}</span>
                           <span>·</span>
-                          {ngo.categories?.map((cat: string, cIdx: number) => (
-                            <span key={cIdx} className="bg-gray-100 px-1 border border-gray-300">
-                              {cat}
-                            </span>
+                          {ngo.categories?.map((c: string, ci: number) => (
+                            <span key={ci} style={{ background: "#f4f4f4", border: "1px solid #ccc", padding: "0 4px" }}>{c}</span>
                           ))}
                         </div>
-                        <p className="text-xs text-gray-700 mb-3 leading-relaxed">{ngo.matchRationale}</p>
-
-                        <div className="flex justify-between items-center pt-2.5 border-t border-gray-200">
-                          <span className="font-mono text-[9px] px-1.5 py-0.5 border border-black bg-gray-100 font-medium">
-                            {ngo.financialTransparency === "PUBLIC_FILINGS_AVAILABLE"
-                              ? "Audited Filings Public"
-                              : "Not publicly disclosed"}
+                        <p style={{ fontSize: 12, color: "#444", lineHeight: 1.5, marginBottom: 10 }}>{ngo.matchRationale}</p>
+                        <div style={{ borderTop: "1px solid #eee", paddingTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontFamily: "monospace", fontSize: 9, border: "1px solid #ccc", padding: "2px 5px", color: "#555" }}>
+                            {ngo.financialTransparency === "PUBLIC_FILINGS_AVAILABLE" ? "Audited Filings Public" : "Not publicly disclosed"}
                           </span>
-                          <Link
-                            href={ngo.profileUrl}
-                            className="font-mono text-[11px] font-bold text-black hover:underline flex items-center gap-1"
-                          >
-                            Contributor Profile →
+                          <Link href={ngo.profileUrl ?? "/contributor"} style={{ fontFamily: "monospace", fontSize: 11, fontWeight: 700, color: "#000", textDecoration: "underline" }}>
+                            Profile →
                           </Link>
                         </div>
                       </div>
@@ -392,36 +385,31 @@ export default function AreaPanel({
               </div>
             )}
 
-            {/* INDIVIDUALS TAB */}
+            {/* ── INDIVIDUALS ──────────────────────────────────── */}
             {activeTab === "individuals" && (
-              <div className="flex flex-col gap-3">
-                <div className="bg-gray-100 border border-black p-2.5 font-mono text-[10px] text-gray-800 leading-tight">
-                  {individualsData?.notice}
-                </div>
-
-                {individualsData?.publicFigures?.length === 0 ? (
-                  <div className="border border-black p-6 text-center font-mono text-gray-500 bg-gray-50">
-                    No verified profile yet for this locality.
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {individualsData?.notice && (
+                  <div style={{ background: "#f4f4f4", border: "1px solid #ccc", padding: 10, fontFamily: "monospace", fontSize: 10, color: "#555", lineHeight: 1.5 }}>
+                    {individualsData.notice}
+                  </div>
+                )}
+                {(!individualsData?.publicFigures || individualsData.publicFigures.length === 0) ? (
+                  <div style={{ border: "1px solid #000", padding: 24, textAlign: "center", fontFamily: "monospace", fontSize: 12, color: "#777" }}>
+                    No verified public-figure profiles for this locality.
                   </div>
                 ) : (
-                  individualsData?.publicFigures?.map((person: any) => (
-                    <div key={person.id} className="border border-black p-3.5 bg-white shadow-sm">
-                      <div className="font-bold text-xs mb-1">{person.name}</div>
-                      <div className="text-[10px] font-mono text-gray-600 mb-2">
-                        Public Figure ({person.nationality || "India"}) · Born {person.birthYear || "N/A"}
+                  individualsData.publicFigures.map((p: any) => (
+                    <div key={p.id} style={{ border: "1px solid #000", padding: 14 }}>
+                      <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 3 }}>{p.name}</div>
+                      <div style={{ fontFamily: "monospace", fontSize: 10, color: "#666", marginBottom: 6 }}>
+                        Public Figure ({p.nationality ?? "India"}) · Born {p.birthYear ?? "N/A"}
                       </div>
-                      <p className="text-xs text-gray-800 mb-3 leading-relaxed">{person.description}</p>
-
-                      <div className="flex justify-between items-center pt-2.5 border-t border-gray-200 text-[10px] font-mono">
-                        <a
-                          href={person.sourceUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="underline flex items-center gap-1 text-black font-bold"
-                        >
-                          ECI Affidavit Filing <ExternalLink size={9} />
+                      <p style={{ fontSize: 12, color: "#333", lineHeight: 1.5, marginBottom: 10 }}>{p.description}</p>
+                      <div style={{ borderTop: "1px solid #eee", paddingTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: "monospace", fontSize: 10 }}>
+                        <a href={p.sourceUrl} target="_blank" rel="noreferrer" style={{ color: "#000", textDecoration: "underline", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                          ECI Affidavit <ExternalLink size={9} />
                         </a>
-                        <Link href="/rover/correction" className="text-gray-500 underline hover:text-black">
+                        <Link href="/request-correction" style={{ color: "#888", textDecoration: "underline" }}>
                           Correction Request
                         </Link>
                       </div>
@@ -431,43 +419,32 @@ export default function AreaPanel({
               </div>
             )}
 
-            {/* SOURCES TAB */}
+            {/* ── SOURCES ──────────────────────────────────────── */}
             {activeTab === "sources" && (
-              <div className="flex flex-col gap-3 font-mono text-xs">
-                <div className="font-bold uppercase text-[11px] mb-1">Primary Public Datasets</div>
-                <div className="border border-black p-3 bg-white">
-                  <div className="font-bold">Census of India 2011</div>
-                  <div className="text-[10px] text-gray-600 mb-1">Primary Census Abstract & Housing Tables</div>
-                  <a href="https://censusindia.gov.in" target="_blank" rel="noreferrer" className="underline text-[10px] text-black">
-                    https://censusindia.gov.in
-                  </a>
-                </div>
-                <div className="border border-black p-3 bg-white">
-                  <div className="font-bold">NITI Aayog National MPI</div>
-                  <div className="text-[10px] text-gray-600 mb-1">National Multidimensional Poverty Index (2023 Review)</div>
-                  <a href="https://niti.gov.in" target="_blank" rel="noreferrer" className="underline text-[10px] text-black">
-                    https://niti.gov.in
-                  </a>
-                </div>
-                <div className="border border-black p-3 bg-white">
-                  <div className="font-bold">Reserve Bank of India (DBIE)</div>
-                  <div className="text-[10px] text-gray-600 mb-1">Basic Statistical Returns (BSR) Credit & Deposits</div>
-                  <a href="https://dbie.rbi.org.in" target="_blank" rel="noreferrer" className="underline text-[10px] text-black">
-                    https://dbie.rbi.org.in
-                  </a>
-                </div>
-                <div className="border border-black p-3 bg-white">
-                  <div className="font-bold">NFHS-5 Factsheets</div>
-                  <div className="text-[10px] text-gray-600 mb-1">Ministry of Health & Family Welfare / IIPS</div>
-                  <a href="http://rchiips.org/nfhs" target="_blank" rel="noreferrer" className="underline text-[10px] text-black">
-                    http://rchiips.org/nfhs
-                  </a>
-                </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <SectionHeader title="Primary Public Datasets" />
+                {[
+                  { name: "Census of India 2011",      sub: "Primary Census Abstract & Housing Tables",           url: "https://censusindia.gov.in" },
+                  { name: "NITI Aayog National MPI",   sub: "National Multidimensional Poverty Index (2023)",      url: "https://niti.gov.in" },
+                  { name: "RBI – DBIE",                sub: "Basic Statistical Returns: Credit & Deposits",        url: "https://dbie.rbi.org.in" },
+                  { name: "NFHS-5 Factsheets",         sub: "Ministry of Health & Family Welfare / IIPS",          url: "http://rchiips.org/nfhs" },
+                  { name: "Election Commission (ECI)", sub: "Candidate affidavit filings (Form 26)",               url: "https://affidavit.eci.gov.in" },
+                  { name: "LGD India",                 sub: "Local Government Directory — admin hierarchy",        url: "https://lgdirectory.gov.in" },
+                ].map(s => (
+                  <div key={s.url} style={{ border: "1px solid #000", padding: 12, background: "#fff" }}>
+                    <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 2 }}>{s.name}</div>
+                    <div style={{ fontFamily: "monospace", fontSize: 10, color: "#666", marginBottom: 6 }}>{s.sub}</div>
+                    <a href={s.url} target="_blank" rel="noreferrer" style={{ fontFamily: "monospace", fontSize: 10, color: "#000", textDecoration: "underline" }}>{s.url}</a>
+                  </div>
+                ))}
               </div>
             )}
           </>
         )}
       </div>
+
+      {/* Spin keyframe */}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

@@ -313,8 +313,8 @@ export default function ClientDashboard({ categories }: { categories: any[] }) {
         </div>
 
         {/* CENTER: 3D Globe OR Sub-National Map */}
-        <div className="flex-grow relative flex flex-col bg-white">
-          <div className="flex-grow relative w-full h-full cursor-move">
+        <div className="flex-grow relative flex flex-col bg-white" style={{ minWidth: 0 }}>
+          <div className="flex-grow relative w-full" style={{ minHeight: 0, position: "relative" }}>
             {currentLevel === "country" ? (
               <Globe 
                 mapData={mapData} 
@@ -322,14 +322,16 @@ export default function ClientDashboard({ categories }: { categories: any[] }) {
                 onCountryClick={handleCountryClick}
               />
             ) : (
-              <SubNationalMap
-                countryCode={selectedCountry || "IND"}
-                level={currentLevel}
-                parentPlaceId={activePlace?.id}
-                activePlace={activePlace}
-                onSelectPlace={handlePlaceSelect}
-                colorBlindMode={colorBlindMode}
-              />
+              <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+                <SubNationalMap
+                  countryCode={selectedCountry || "IND"}
+                  level={currentLevel}
+                  parentPlaceId={activePlace?.id}
+                  activePlace={activePlace}
+                  onSelectPlace={handlePlaceSelect}
+                  colorBlindMode={colorBlindMode}
+                />
+              </div>
             )}
 
             {renderLegend()}
