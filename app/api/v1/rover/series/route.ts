@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
     // Group by entity code
     const seriesData: Record<string, unknown[]> = {};
     for (const dp of dataPoints) {
+      if (!dp.country) continue;
       const code = dp.country.code;
       if (!seriesData[code]) seriesData[code] = [];
       seriesData[code].push({

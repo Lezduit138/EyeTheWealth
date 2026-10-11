@@ -50,10 +50,106 @@ model Country {
   dataPoints  DataPoint[]
   comparisons CompareSelection[]
   regionMemberships RegionCountry[]
+  places      Place[]
 
   @@index([code])
   @@index([name])
   @@index([isAggregate])
+}
+
+// Sub-national Place Hierarchy
+// Levels: country | state | district | subdistrict | city | ward | street
+model Place {
+  id              String        @id @default(cuid())
+  parentId        String?
+  parent          Place?        @relation("PlaceHierarchy", fields: [parentId], references: [id])
+  children        Place[]       @relation("PlaceHierarchy")
+  countryId       String?
+  country         Country?      @relation(fields: [countryId], references: [id])
+  level           String        // "country" | "state" | "district" | "subdistrict" | "city" | "ward" | "street"
+  name            String
+  slug            String        @unique
+  aliases         String?       // JSON array of old/alternate names
+  iso3            String?
+  lgdCode         String?       // Local Government Directory code
+  census2011Code  String?       // Census 2011 code
+  geoBoundariesId String?       // geoBoundaries boundary ID
+  population      Float?
+  boundaryVintage String?       // e.g. "2011", "2021", "geoBoundaries-v5"
+  geometryRef     String?       // TopoJSON / GeoJSON relative ref or URL
+  latitude        Float?
+  longitude       Float?
+  bbox            String?       // JSON: [minLon, minLat, maxLon, maxLat]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  dataPoints      DataPoint[]
+  assetRecords    AssetRecord[]
+  deprivationFlags AreaDeprivationFlag[]
+  people          Person[]
+
+  @@index([parentId])
+  @@index([countryId])
+  @@index([level])
+  @@index([name])
+  @@index([lgdCode])
+  @@index([census2011Code])
+  @@index([level, parentId])
+}
+
+// Extensible Asset Categories (Land, Housing, Household durable assets, Financial, Livestock, Vehicles, Businesses, Natural resources, Gold)
+model AssetCategory {
+  id           String        @id @default(cuid())
+  slug         String        @unique // e.g. "land", "housing", "financial", "gold"
+  name         String
+  description  String?
+  displayOrder Int           @default(0)
+  createdAt    DateTime      @default(now())
+
+  records      AssetRecord[]
+
+  @@index([slug])
+}
+
+model AssetRecord {
+  id           String        @id @default(cuid())
+  placeId      String
+  place        Place         @relation(fields: [placeId], references: [id])
+  categoryId   String
+  category     AssetCategory @relation(fields: [categoryId], references: [id])
+  indicatorName String       // e.g. "Agricultural Landholding Area", "Bank Deposits"
+  value        Float?        // null = "Not publicly disclosed"
+  unit         String
+  year         Int
+  level        String        // finest level actually measured
+  sourceName   String
+  sourceUrl    String
+  methodology  String?
+  isEstimate   Boolean       @default(false)
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([placeId])
+  @@index([categoryId])
+  @@index([level])
+  @@index([year])
+}
+
+model AreaDeprivationFlag {
+  id           String        @id @default(cuid())
+  placeId      String
+  place        Place         @relation(fields: [placeId], references: [id])
+  isFlagged    Boolean       @default(false) // "Deprivation indicators present"
+  ruleName     String        // e.g. "MPI_HEADCOUNT_GT_NATIONAL_OR_BOTTOM_QUINTILE"
+  ruleThresholds String      // JSON string documenting thresholds used
+  summaryText  String?
+  weakDimensions String?     // JSON array of { dimension, indicator, value, parentPercentile, countryPercentile }
+  computedAt   DateTime      @default(now())
+
+  @@unique([placeId, ruleName])
+  @@index([placeId])
+  @@index([isFlagged])
 }
 
 // Region/Group: World Bank regions, income groups, UN sub-regions
@@ -133,8 +229,11 @@ model DataPoint {
   id                 String    @id @default(cuid())
   indicatorId        String
   indicator          Indicator @relation(fields: [indicatorId], references: [id])
-  countryId          String
-  country            Country   @relation(fields: [countryId], references: [id])
+  countryId          String?
+  country            Country?  @relation(fields: [countryId], references: [id])
+  placeId            String?
+  place              Place?    @relation(fields: [placeId], references: [id])
+  level              String    @default("country") // finest level actually measured: country | state | district | subdistrict | city | ward | street
   value              Float?    // null = "Not publicly disclosed"
   unit               String?
   year               Int
@@ -145,6 +244,8 @@ model DataPoint {
   fetchedFromUrl     String?   // Exact API URL used (for audit)
   // VerificationStatus: OFFICIAL | ESTIMATED | NOT_DISCLOSED | SAMPLE | UNVERIFIED
   verificationStatus String    @default("UNVERIFIED")
+  isEstimate         Boolean   @default(false)
+  methodology        String?
   isProjection       Boolean   @default(false) // IMF projected years
   isSampleData       Boolean   @default(false)
   notes              String?
@@ -153,11 +254,14 @@ model DataPoint {
 
   @@unique([indicatorId, countryId, year, sourceId])
   @@index([countryId])
+  @@index([placeId])
   @@index([indicatorId])
   @@index([year])
+  @@index([level])
   @@index([verificationStatus])
   @@index([indicatorId, year]) // For map/choropleth queries
   @@index([countryId, indicatorId]) // For country profiles
+  @@index([placeId, level, indicatorId, year])
 }
 
 model Source {
@@ -581,10 +685,12 @@ model Person {
   name           String
   slug           String           @unique
   nationality    String?
+  placeId        String?
+  place          Place?           @relation(fields: [placeId], references: [id])
   birthYear      Int?
   description    String?
-  isSampleData   Boolean          @default(true)
-  isPublicFigure Boolean          @default(false)
+  isSampleData   Boolean          @default(false)
+  isPublicFigure Boolean          @default(true)
   sourceUrl      String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -594,6 +700,7 @@ model Person {
 
   @@index([slug])
   @@index([nationality])
+  @@index([placeId])
 }
 
 model PersonNetWorth {

@@ -49,10 +49,12 @@ export default async function IndicatorPage({ params }: Props) {
   const interpretation = indicator.interpretations[0];
 
   // Build per-country latest values and historical series
-  const latestByCountry = new Map<string, typeof indicator.dataPoints[0]>();
-  const historyByCountry = new Map<string, typeof indicator.dataPoints>();
+  const validDataPoints = indicator.dataPoints.filter((dp) => dp.country !== null);
+  const latestByCountry = new Map<string, typeof validDataPoints[0]>();
+  const historyByCountry = new Map<string, typeof validDataPoints>();
 
-  for (const dp of indicator.dataPoints) {
+  for (const dp of validDataPoints) {
+    if (!dp.country) continue;
     const key = dp.country.code;
     if (!latestByCountry.has(key) || dp.year > latestByCountry.get(key)!.year) {
       latestByCountry.set(key, dp);
@@ -67,14 +69,15 @@ export default async function IndicatorPage({ params }: Props) {
     year: number;
     values: Array<{ source: string; value: number | null }>;
   }> = [];
-  const seen = new Map<string, typeof indicator.dataPoints[0]>();
-  for (const dp of indicator.dataPoints) {
+  const seen = new Map<string, typeof validDataPoints[0]>();
+  for (const dp of validDataPoints) {
+    if (!dp.country) continue;
     const key = `${dp.country.code}-${dp.year}`;
     if (seen.has(key)) {
       const existing = seen.get(key)!;
       if (existing.sourceId !== dp.sourceId) {
         const existing_disc = discrepancies.find(
-          (d) => d.country === dp.country.code && d.year === dp.year
+          (d) => d.country === dp.country!.code && d.year === dp.year
         );
         if (existing_disc) {
           existing_disc.values.push({ source: dp.source?.name ?? "Unknown", value: dp.value });
@@ -169,17 +172,17 @@ export default async function IndicatorPage({ params }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {countries.map((dp) => (
+                {countries.filter((dp) => dp.country !== null).map((dp) => (
                   <tr key={dp.id}>
                     <td>
                       <Link
-                        href={`/rover/${dp.country.code.toLowerCase()}`}
+                        href={`/rover/${dp.country!.code.toLowerCase()}`}
                         style={{ fontWeight: 600, textDecoration: "none", color: "#000" }}
                       >
-                        {dp.country.flagEmoji && (
-                          <span style={{ marginRight: "0.5rem" }}>{dp.country.flagEmoji}</span>
+                        {dp.country!.flagEmoji && (
+                          <span style={{ marginRight: "0.5rem" }}>{dp.country!.flagEmoji}</span>
                         )}
-                        {dp.country.name}
+                        {dp.country!.name}
                       </Link>
                     </td>
                     <td>
@@ -217,7 +220,7 @@ export default async function IndicatorPage({ params }: Props) {
                     </td>
                     <td>
                       <Link
-                        href={`/rover/compare?indicator=${indicator.slug}&countries=${dp.country.code.toLowerCase()}`}
+                        href={`/rover/compare?indicator=${indicator.slug}&countries=${dp.country!.code.toLowerCase()}`}
                         style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}
                       >
                         Compare →

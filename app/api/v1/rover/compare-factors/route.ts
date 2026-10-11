@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
     const latestPerCountryFactor = new Map<string, typeof results[0]>();
     
     for (const row of results) {
+      if (!row.country) continue;
       const key = `${row.indicator.slug}-${row.country.code}`;
       if (!latestPerCountryFactor.has(key)) {
         latestPerCountryFactor.set(key, row);
@@ -56,6 +57,7 @@ export async function GET(req: NextRequest) {
     }
 
     for (const row of latestPerCountryFactor.values()) {
+      if (!row.country) continue;
       const slug = row.indicator.slug;
       if (!formatted[slug].name) {
         formatted[slug].name = row.indicator.name;

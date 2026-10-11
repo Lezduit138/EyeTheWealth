@@ -72,8 +72,8 @@ export async function analyzeIndicatorForCountry(indicatorSlug: string, countryC
   }
 
   // 6. Regional / Income Group comparison
-  const regionalData = allDataForYear.filter(d => d.country.region === country.region).map(d => d.value as number);
-  const incomeGroupData = allDataForYear.filter(d => d.country.incomeLevel === country.incomeLevel).map(d => d.value as number);
+  const regionalData = allDataForYear.filter(d => d.country && d.country.region === country.region).map(d => d.value as number);
+  const incomeGroupData = allDataForYear.filter(d => d.country && d.country.incomeLevel === country.incomeLevel).map(d => d.value as number);
 
   const getMedian = (arr: number[]) => {
     if (arr.length === 0) return null;

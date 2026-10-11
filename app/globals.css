@@ -112,6 +112,24 @@ a:hover {
   opacity: 0.6;
 }
 
+/* Ensure buttons and elements with dark backgrounds have white text without underlines */
+a.bg-black,
+a[class*="bg-black"],
+a.etw-btn-filled,
+a[class*="text-white"],
+button.bg-black,
+button[class*="bg-black"],
+button[class*="text-white"] {
+  color: #ffffff !important;
+  text-decoration: none !important;
+}
+
+a.bg-white,
+a[class*="bg-white"],
+a.etw-btn {
+  text-decoration: none !important;
+}
+
 /* ─── ETW Custom Utility Classes ───────────────────────────────────────────── */
 
 /* Label / micro text */

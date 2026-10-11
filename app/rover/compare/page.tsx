@@ -34,7 +34,9 @@ function CompareInner() {
 
   const [allCountries, setAllCountries] = useState<Country[]>([]);
   const [indicators, setIndicators] = useState<Indicator[]>([]);
-  const [selectedCountries, setSelectedCountries] = useState<string[]>(urlCountriesInit);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>(
+    urlCountriesInit.length > 0 ? urlCountriesInit : ["IND", "USA"]
+  );
   const [selectedIndicator, setSelectedIndicator] = useState<string>(urlIndicatorInit);
   const [countrySearch, setCountrySearch] = useState("");
   const [chartData, setChartData] = useState<any[]>([]);
@@ -42,6 +44,21 @@ function CompareInner() {
   const [loadingChart, setLoadingChart] = useState(false);
   const [factors, setFactors] = useState<any[]>([]);
   const [loadingFactors, setLoadingFactors] = useState(false);
+
+  // Sync state when URL search params change
+  useEffect(() => {
+    const countriesParam = searchParams.get("countries");
+    if (countriesParam) {
+      const parsed = countriesParam.split(",").filter(Boolean).map(c => c.toUpperCase());
+      if (parsed.length > 0) {
+        setSelectedCountries(parsed);
+      }
+    }
+    const indicatorParam = searchParams.get("indicator");
+    if (indicatorParam) {
+      setSelectedIndicator(indicatorParam);
+    }
+  }, [searchParams]);
 
   // Load countries and indicators on mount
   useEffect(() => {
@@ -115,6 +132,14 @@ function CompareInner() {
     router.replace(`/rover/compare?${params.toString()}`, { scroll: false });
   };
 
+  const handleIndicatorChange = (slug: string) => {
+    setSelectedIndicator(slug);
+    const params = new URLSearchParams();
+    if (selectedCountries.length > 0) params.set("countries", selectedCountries.join(","));
+    if (slug) params.set("indicator", slug);
+    router.replace(`/rover/compare?${params.toString()}`, { scroll: false });
+  };
+
   const filteredCountries = countrySearch.trim()
     ? allCountries.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase()) || c.code.toLowerCase().includes(countrySearch.toLowerCase()))
     : allCountries;
@@ -145,12 +170,14 @@ function CompareInner() {
               <select
                 className="etw-input"
                 value={selectedIndicator}
-                onChange={e => setSelectedIndicator(e.target.value)}
+                onChange={e => handleIndicatorChange(e.target.value)}
                 style={{ width: "100%" }}
               >
                 <option value="">-- Choose --</option>
                 {indicators.map(ind => (
-                  <option key={ind.slug} value={ind.slug}>{ind.category.name}: {ind.name}</option>
+                  <option key={ind.slug} value={ind.slug}>
+                    {ind.category?.name ? `${ind.category.name}: ` : ""}{ind.name}
+                  </option>
                 ))}
               </select>
             </div>
