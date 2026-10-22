@@ -86,12 +86,12 @@ export default async function NgoProfilePage({ params }: Props) {
               <span className="font-bold">{ngo.registrationNumber ?? "Not disclosed"}</span>
             </div>
             <div>
-              <span className="etw-label block text-gray-500 mb-1">NITI AAYOG ID</span>
-              <span className="font-bold">{ngo.ngoId ?? "Not disclosed"}</span>
+              <span className="etw-label block text-gray-500 mb-1">DARPAN ID</span>
+              <span className="font-bold">{ngo.darpanId ?? "Not publicly disclosed"}</span>
             </div>
             <div>
-              <span className="etw-label block text-gray-500 mb-1">FCRA REG.</span>
-              <span className="font-bold">{ngo.fcraRegistration ?? "Not disclosed"}</span>
+              <span className="etw-label block text-gray-500 mb-1">REG. AUTHORITY</span>
+              <span className="font-bold">{ngo.registrationAuthority ?? "Not publicly disclosed"}</span>
             </div>
             <div>
               <span className="etw-label block text-gray-500 mb-1">REG. TYPE</span>

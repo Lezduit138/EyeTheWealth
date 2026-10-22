@@ -41,8 +41,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Emergency not found" }, { status: 404 });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updateData: any = {};
+  const updateData: Record<string, unknown> = {};
   const { action } = parsed.data;
 
   if (action === "approve") {
