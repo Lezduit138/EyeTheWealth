@@ -1,84 +1,107 @@
-﻿/* eslint-disable */
-// ETW â€” De Basement Module Landing Page
+// ETW — De-Basement Module Landing Page
+// Legal Money Regularization & Financial Transparency Knowledge Hub
 
 import type { Metadata } from "next";
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatutoryDisclaimer } from "@/components/de-basement/StatutoryDisclaimer";
+import { HubInteractiveView } from "@/components/de-basement/HubInteractiveView";
+import {
+  KNOWLEDGE_ARTICLES,
+  DOCUMENT_CHECKLISTS,
+  DOCUMENTED_CASES,
+  KNOWLEDGE_FAQS,
+  OFFICIAL_REGULATORY_RESOURCES,
+} from "@/data/de-basement";
 
 export const metadata: Metadata = {
-  title: "DE BASEMENT â€” Financial Structures",
-  description: "Examine legal financial structures, regulatory gaps, and transparency challenges. Educational use only.",
+  title: "DEBASEMENT — Legal Money Regularization Knowledge Hub",
+  description:
+    "Educational platform focused exclusively on understanding the legal treatment of undeclared money, financial transparency, lawful income disclosure, tax compliance, and the distinction between money laundering and legal regularization.",
 };
 
+interface DbCaseItem {
+  id: string;
+  slug: string;
+  title: string;
+  status: string;
+  [key: string]: unknown;
+}
+
 export default async function DeBasementPage() {
-  const cases = await prisma.case.findMany({
-    where: { publishedAt: { not: null } },
-    orderBy: { createdAt: "desc" },
-  });
+  // Query any published investigative cases from the database
+  let dbCases: DbCaseItem[] = [];
+  try {
+    dbCases = await prisma.case.findMany({
+      where: { publishedAt: { not: null } },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (err) {
+    console.error("Error fetching published cases:", err);
+  }
 
   return (
-    <div className="etw-page bg-black text-white min-h-screen">
-      <div className="etw-container py-12">
-        <div className="border-b-2 border-white pb-8 mb-12">
-          <p className="etw-label text-gray-400 mb-2">MODULE 3</p>
-          <h1 className="text-5xl font-black tracking-tight mb-4 uppercase">DE BASEMENT</h1>
-          <p className="text-lg text-gray-300 max-w-2xl leading-relaxed">
-            Legal financial structures, regulatory gaps, and why tracing money through legitimate structures is structurally difficult.
+    <div className="etw-page bg-white text-black min-h-screen">
+      <div className="etw-container py-10">
+        {/* Module Header */}
+        <div className="border-b-4 border-black pb-8 mb-8">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+            <span className="font-mono text-xs font-black uppercase px-2.5 py-1 bg-black text-white">
+              MODULE 03 — FINANCIAL TRANSPARENCY &amp; COMPLIANCE
+            </span>
+            <span className="text-xs font-mono font-bold text-neutral-600">
+              JURISDICTION: REPUBLIC OF INDIA • OFFICIAL CBDT &amp; RBI REPOSITORIES
+            </span>
+          </div>
+
+          <h1 className="text-4xl md:text-6xl font-black tracking-tight uppercase mb-4 text-black">
+            DEBASEMENT
+          </h1>
+
+          <p className="text-base md:text-lg text-neutral-800 max-w-4xl leading-relaxed m-0 font-sans">
+            A specialized text-based educational platform focused on the legal treatment of undeclared money,
+            statutory income disclosure procedures, tax compliance mechanisms under the Income Tax Act 1961,
+            legitimate cross-border transfers, and the strict statutory distinction between money laundering
+            under PMLA 2002 and lawful financial regularization.
           </p>
         </div>
 
-        <div className="border border-dashed border-gray-500 p-6 mb-12 bg-[#111]">
-          <p className="font-bold text-red-500 mb-2 uppercase tracking-wider text-sm">Educational Purpose Only</p>
-          <p className="text-sm text-gray-400 leading-relaxed mb-0">
-            This module explains how structures operate to obscure ownership or origin. It does not provide operational guidance on how to exploit any structure, nor does it contain optimization advice. Cases labelled &ldquo;ILLUSTRATIVE&rdquo; use entirely fictional entity names.
-          </p>
+        {/* High-Level Overview Metrics */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-10 text-xs font-mono">
+          <div className="border-2 border-black p-3 bg-[#fafafa]">
+            <span className="text-neutral-500 uppercase block text-[10px]">Statutory Modules</span>
+            <span className="text-xl font-black text-black">08 SECTIONS</span>
+          </div>
+          <div className="border-2 border-black p-3 bg-[#fafafa]">
+            <span className="text-neutral-500 uppercase block text-[10px]">Return Regularization</span>
+            <span className="text-xl font-black text-black">SEC. 139(8A)</span>
+          </div>
+          <div className="border-2 border-black p-3 bg-[#fafafa]">
+            <span className="text-neutral-500 uppercase block text-[10px]">Document Checklists</span>
+            <span className="text-xl font-black text-black">06 PROTOCOLS</span>
+          </div>
+          <div className="border-2 border-black p-3 bg-[#fafafa]">
+            <span className="text-neutral-500 uppercase block text-[10px]">Judicial Precedents</span>
+            <span className="text-xl font-black text-black">05 LANDMARK</span>
+          </div>
+          <div className="border-2 border-black p-3 bg-[#fafafa] col-span-2 md:col-span-1">
+            <span className="text-neutral-500 uppercase block text-[10px]">Official Portals</span>
+            <span className="text-xl font-black text-black">08 VERIFIED</span>
+          </div>
         </div>
 
-        <h2 className="text-2xl font-bold mb-6 tracking-wide uppercase border-b border-gray-800 pb-2">CASE STUDIES &amp; STRUCTURES</h2>
+        {/* Mandatory Educational & Regulatory Disclaimer */}
+        <StatutoryDisclaimer compact={false} />
 
-        {cases.length === 0 && (
-          <p className="text-gray-500 italic">No published case studies yet. Cases are added by administrators after manual verification.</p>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {cases.map((c) => {
-            const tags: string[] = c.whatIsKnown ? JSON.parse(c.whatIsKnown) : [];
-            return (
-              <Link
-                key={c.id}
-                href={`/de-basement/${c.slug}`}
-                className="block border border-gray-700 bg-[#0a0a0a] hover:bg-[#1a1a1a] transition-colors p-6 group no-underline text-white relative overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 p-2">
-                  <StatusBadge status={c.isSampleData ? "SAMPLE" : "VERIFIED"} showIcon={false} />
-                </div>
-                <h3 className="text-xl font-bold mb-3 mt-4 group-hover:underline pr-20">{c.title}</h3>
-                <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-                  {c.subtitle ?? c.legalMechanism ?? ""}
-                </p>
-
-                {c.legalMechanism && (
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    <span className="text-xs border border-gray-600 px-2 py-1 text-gray-400 uppercase">
-                      {c.legalMechanism}
-                    </span>
-                    <span className="text-xs border border-gray-600 px-2 py-1 text-gray-400 uppercase">
-                      {c.status}
-                    </span>
-                  </div>
-                )}
-
-                <div className="mt-auto border-t border-gray-800 pt-4 flex justify-between items-center text-xs tracking-widest font-bold uppercase text-gray-500 group-hover:text-white transition-colors">
-                  <span>OPEN FILE</span>
-                  <span>â†’</span>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+        {/* Central Interactive Knowledge Hub View */}
+        <HubInteractiveView
+          articles={KNOWLEDGE_ARTICLES}
+          checklists={DOCUMENT_CHECKLISTS}
+          cases={DOCUMENTED_CASES}
+          faqs={KNOWLEDGE_FAQS}
+          resources={OFFICIAL_REGULATORY_RESOURCES}
+          dbCases={dbCases}
+        />
       </div>
     </div>
   );
 }
-

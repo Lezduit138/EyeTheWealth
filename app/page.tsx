@@ -132,8 +132,8 @@ export default function HomePage() {
             <ModuleCard
               href="/de-basement"
               title="DE BASEMENT"
-              subtitle="Financial Structures & Transparency"
-              description="Examine legal financial structures, regulatory gaps, and why tracing money through legitimate structures is structurally difficult. Educational use only."
+              subtitle="Legal Money Regularization Knowledge Hub"
+              description="Explore statutory treatment of undeclared money, return correction under Section 139(8A), tax compliance, legitimate transfers, and distinguishing money laundering from legal regularization."
               cta="→ ENTER DE BASEMENT"
             />
           </div>

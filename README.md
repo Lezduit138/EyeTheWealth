@@ -57,7 +57,7 @@ Open **http://localhost:3000**
 app/
   rover/          — Macro Monitor (Globe, Compare, Country profiles)
   contributor/    — NGO Directory, profiles, Fund Flow, donations
-  de-basement/    — Educational content
+  de-basement/    — Legal Money Regularization Knowledge Hub (Articles, Checklists, Cases, FAQs)
   admin/          — Protected admin dashboard (coverage, donations)
   api/v1/         — REST API (rate-limited, paginated)
 components/
@@ -65,10 +65,11 @@ components/
   ui/             — ETW design-system components (Card, DataTable, StatusBadge…)
   rover/          — Globe, IndicatorHistoryChart, ComparisonMatrix
   contributor/    — NGO cards, FundFlowGraph, DonationModal
+  de-basement/    — Knowledge hub interactive view, checklists, case studies, procedures
 lib/              — Prisma singleton, auth helpers, API response utils
 prisma/           — schema.prisma (SQLite → PostgreSQL portable)
 scripts/          — Data ingestion & seed scripts
-tests/            — Unit tests (20 tests; npm test)
+tests/            — Unit tests (28 tests; npm test)
 docs/             — ETW_RULES.md, architecture decisions
 ```
 
