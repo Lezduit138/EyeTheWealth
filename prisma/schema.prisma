@@ -268,8 +268,12 @@ model Ngo {
   // Key people (name+role+sourceUrl required per spec)
   keyPeople             String?            // JSON: [{name, role, sourceUrl}]
 
-  // Financial transparency
+  // Financial transparency & Compliance
   taxExemptionInfo      String?            // JSON: {has80G, has12A, sourceUrl} — only with source
+  tax80gStatus          String?            // "VERIFIED" | "EXPIRED" | "NOT ON RECORD"
+  tax12aStatus          String?            // "VERIFIED" | "EXPIRED" | "NOT ON RECORD"
+  fcraStatus            String?            // "VERIFIED" | "EXPIRED" | "NOT ON RECORD"
+  fcraRegistrationNumber String?
 
   // Payment via ETW
   paymentEnabled        Boolean            @default(false) // ADMIN-only; requires consent
@@ -351,12 +355,16 @@ model NgoFinancialYear {
   donations            Float?
   grants               Float?
   csrFunding           Float?
-  governmentFunding    Float?
   foreignContributions Float?   // FCRA total
+  foreignContribution  Float?
   assets               Float?
   liabilities          Float?
   adminExpenditure     Float?
+  administrativeExpenses Float?
   programExpenditure   Float?
+  programExpenses      Float?
+  governmentFunding    Float?
+  governmentGrants     Float?
 
   // Provenance (required)
   sourceName           String?
@@ -437,6 +445,7 @@ model EvidenceDocument {
   publishedDate DateTime?
   retrievedDate DateTime?
   isSampleData  Boolean       @default(false)
+  verificationStatus String   @default("UNVERIFIED") // "VERIFIED" | "UNVERIFIED"
   createdAt     DateTime      @default(now())
 
   transactions  Transaction[]
@@ -559,6 +568,7 @@ model Donation {
 
   // Receipt
   receiptUrl       String?
+  receiptNumber    String?
   financialYear    String?   // e.g. "2024-25"
 
   // Refund

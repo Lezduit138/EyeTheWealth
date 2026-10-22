@@ -26,10 +26,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  // Only ADMIN can create simulations
   const body = await req.json();
-  if (body.isSimulation && (session.user as any).role !== "ADMIN") {
-    return NextResponse.json({ error: "Only ADMIN can create simulations" }, { status: 403 });
+
+  // Guard simulation mode
+  if (body.isSimulation) {
+    if (process.env.ENABLE_SIMULATION !== "true") {
+      return NextResponse.json(
+        { error: "Simulation mode is disabled. Set ENABLE_SIMULATION=true to enable simulation drills." },
+        { status: 403 }
+      );
+    }
+    if ((session.user as any).role !== "ADMIN") {
+      return NextResponse.json({ error: "Only ADMIN can create simulations" }, { status: 403 });
+    }
   }
 
   const parsed = CreateSchema.safeParse(body);

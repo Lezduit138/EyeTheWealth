@@ -1,0 +1,2 @@
+name,registrationNumber,registrationAuthority,city,district,categories,areasOfWork,website,officialDonationUrl,sourceName,sourceUrl,sourceRetrievedDate
+"Example NGO Name","E-12345 (Mumbai)","Charity Commissioner","Mumbai","Mumbai City","Education|Children","Primary education|Literacy","https://example.org","https://example.org/donate","NITI Aayog NGO Darpan","https://ngodarpan.gov.in","2024-01-15"

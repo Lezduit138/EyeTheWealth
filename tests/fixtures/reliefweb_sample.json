@@ -1,0 +1,40 @@
+{
+  "time": 25,
+  "href": "https://api.reliefweb.int/v2/disasters",
+  "totalCount": 2,
+  "count": 2,
+  "data": [
+    {
+      "id": "52011",
+      "fields": {
+        "id": 52011,
+        "name": "India: Floods and Landslides in Maharashtra - Jul 2024",
+        "glide": "FL-2024-000123-IND",
+        "status": "alert",
+        "type": [
+          {
+            "id": 4611,
+            "name": "Flood",
+            "primary": true
+          }
+        ],
+        "date": {
+          "created": "2024-07-25T10:00:00+00:00"
+        },
+        "description": "Intense rainfall in Raigad, Pune, and Thane districts caused localized flash floods and landslides.",
+        "url": "https://reliefweb.int/disaster/fl-2024-000123-ind"
+      }
+    },
+    {
+      "id": "52012",
+      "fields": {
+        "id": 52012,
+        "name": "Sudan: Conflict Displacement",
+        "status": "ongoing",
+        "type": [{ "name": "Complex Emergency" }],
+        "date": { "created": "2024-08-01T00:00:00+00:00" },
+        "url": "https://reliefweb.int/disaster/ce-2024-000999-sdn"
+      }
+    }
+  ]
+}

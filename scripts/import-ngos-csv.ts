@@ -1,4 +1,3 @@
-/* eslint-disable */
 /**
  * ETW — Real NGO CSV Importer (Layer 1 Directory)
  * Reads CSV of real NGOs, validates required fields, normalizes districts and categories,

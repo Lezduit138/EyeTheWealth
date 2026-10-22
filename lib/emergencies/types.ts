@@ -72,6 +72,7 @@ export const DISTRICT_ALIASES: Record<string, string> = {
   "Thane": "Thane",
   "Palghar": "Palghar",
   "Pune": "Pune",
+  "Poona": "Pune",
   "Nagpur": "Nagpur",
   "Amravati": "Amravati",
   "Yavatmal": "Yavatmal",

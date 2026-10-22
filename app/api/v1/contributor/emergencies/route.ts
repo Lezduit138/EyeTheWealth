@@ -12,11 +12,16 @@ export async function GET(req: NextRequest) {
     where.isActive = true;
   }
 
+  // If simulation is not explicitly enabled, exclude simulation records from public API
+  if (process.env.ENABLE_SIMULATION !== "true") {
+    where.isSimulation = false;
+  }
+
   try {
     const emergencies = await prisma.emergency.findMany({
       where,
       orderBy: [
-        { severity: "desc" }, // Assume string sort works for now, or just rely on reportedAt
+        { severity: "desc" },
         { reportedAt: "desc" }
       ],
       take: limit,

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#" xmlns:georss="http://www.georss.org/georss" xmlns:gdacs="http://www.gdacs.org">
+  <channel>
+    <title>GDACS RSS Alert Feed</title>
+    <link>https://www.gdacs.org</link>
+    <description>Global Disaster Alert and Coordination System</description>
+    <item>
+      <title>Green Flood Alert in Maharashtra (India)</title>
+      <description>Heavy monsoon discharge affecting low-lying areas of Kolhapur and Sangli districts.</description>
+      <link>https://www.gdacs.org/report.aspx?eventid=1001&amp;episodeid=1&amp;eventtype=FL</link>
+      <pubDate>Mon, 21 Oct 2024 06:00:00 GMT</pubDate>
+      <guid>FL-1001-IND</guid>
+      <georss:point>16.7 74.24</georss:point>
+      <gdacs:alertlevel>Orange</gdacs:alertlevel>
+      <gdacs:eventtype>FL</gdacs:eventtype>
+      <gdacs:country>India</gdacs:country>
+    </item>
+    <item>
+      <title>Earthquake in Japan</title>
+      <description>Magnitude 5.5 off coast of Honshu</description>
+      <link>https://www.gdacs.org/report.aspx?eventid=2002</link>
+      <pubDate>Mon, 21 Oct 2024 04:00:00 GMT</pubDate>
+      <guid>EQ-2002-JPN</guid>
+      <georss:point>37.5 141.2</georss:point>
+      <gdacs:alertlevel>Green</gdacs:alertlevel>
+      <gdacs:eventtype>EQ</gdacs:eventtype>
+      <gdacs:country>Japan</gdacs:country>
+    </item>
+  </channel>
+</rss>

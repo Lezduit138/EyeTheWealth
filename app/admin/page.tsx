@@ -1,11 +1,11 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 import { auth } from "@/auth";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminDashboard() {
   const session = await auth();
-  if (!session?.user) return null; // Caught by middleware anyway
+  if (!session?.user) return null;
 
   const counts = await prisma.$transaction([
     prisma.country.count(),
@@ -48,12 +48,12 @@ export default async function AdminDashboard() {
               </div>
             </div>
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <span className="text-xs text-gray-400">Manage via scripts/ingest-worldbank.ts</span>
+              <span className="text-xs text-gray-400">Live World Bank Ingestion</span>
             </div>
           </div>
 
           <div className="border border-black p-6 bg-white">
-            <h3 className="etw-label mb-4 text-gray-500">CONTRIBUTOR & EMERGENCY</h3>
+            <h3 className="etw-label mb-4 text-gray-500">CONTRIBUTOR &amp; EMERGENCY</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-3xl font-bold">{counts[3]}</p>
@@ -63,6 +63,20 @@ export default async function AdminDashboard() {
                 <p className="text-3xl font-bold">{counts[4]}</p>
                 <p className="text-xs text-gray-500 uppercase">Emergencies</p>
               </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-200 flex flex-col gap-2">
+              <Link
+                href="/admin/coverage"
+                className="text-xs font-bold font-mono underline hover:text-gray-600 uppercase"
+              >
+                &rarr; View Coverage &amp; Completeness
+              </Link>
+              <Link
+                href="/admin/donations"
+                className="text-xs font-bold font-mono underline hover:text-gray-600 uppercase"
+              >
+                &rarr; View Platform Donations
+              </Link>
             </div>
           </div>
 
@@ -74,17 +88,36 @@ export default async function AdminDashboard() {
                 <p className="text-xs text-gray-500 uppercase">Case Studies</p>
               </div>
             </div>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <span className="text-xs text-gray-400">Forensic financial analysis cases</span>
+            </div>
           </div>
         </div>
-        
-        <div className="bg-gray-50 border border-dashed border-gray-400 p-8 text-center">
-          <h2 className="text-xl font-bold mb-2 uppercase">Administration Tooling</h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            CRUD interfaces for Contributor NGOs, Emergencies, and Case Studies will be built in a future phase. For now, use Prisma Studio (`npm run db:studio`) to manage database records.
-          </p>
+
+        <div className="bg-gray-50 border-2 border-black p-8 text-center space-y-4">
+          <h2 className="text-xl font-black uppercase">Contributor Administration Portals</h2>
+          <div className="flex flex-wrap justify-center gap-4 pt-2">
+            <Link
+              href="/admin/coverage"
+              className="px-5 py-2.5 bg-black text-white text-xs font-mono font-bold uppercase tracking-wider hover:bg-gray-800"
+            >
+              Coverage &amp; Funnel Dashboard
+            </Link>
+            <Link
+              href="/admin/donations"
+              className="px-5 py-2.5 border-2 border-black bg-white text-black text-xs font-mono font-bold uppercase tracking-wider hover:bg-gray-100"
+            >
+              Donation Settlement Audit
+            </Link>
+            <Link
+              href="/admin/emergencies"
+              className="px-5 py-2.5 border-2 border-black bg-white text-black text-xs font-mono font-bold uppercase tracking-wider hover:bg-gray-100"
+            >
+              Emergency Verification Queue
+            </Link>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-

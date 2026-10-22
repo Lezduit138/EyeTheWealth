@@ -1,0 +1,61 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "generated": 1729000000000,
+    "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+    "title": "USGS All Earthquakes, Past Day",
+    "status": 200,
+    "api": "1.10.3",
+    "count": 2
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "mag": 4.8,
+        "place": "12 km WNW of Koynanagar, India",
+        "time": 1729001200000,
+        "updated": 1729005000000,
+        "tz": null,
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000test1",
+        "detail": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/us7000test1.geojson",
+        "felt": 34,
+        "alert": "green",
+        "status": "reviewed",
+        "tsunami": 0,
+        "sig": 350,
+        "net": "us",
+        "code": "7000test1",
+        "sources": ",us,",
+        "types": ",origin,phase-data,",
+        "nst": 42,
+        "dmin": 1.2,
+        "rms": 0.45,
+        "gap": 110,
+        "magType": "mb",
+        "type": "earthquake",
+        "title": "M 4.8 - 12 km WNW of Koynanagar, India"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [73.65, 17.42, 10.0]
+      },
+      "id": "us7000test1"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "mag": 5.2,
+        "place": "Off the coast of Chile",
+        "time": 1728990000000,
+        "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000chile",
+        "title": "M 5.2 - Chile"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-71.2, -32.5, 25.0]
+      },
+      "id": "us7000chile"
+    }
+  ]
+}
