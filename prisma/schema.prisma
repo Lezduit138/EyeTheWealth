@@ -12,20 +12,21 @@ datasource db {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ENUMERATIONS
+// ENUMERATIONS (stored as String; validated in code — SQLite has no native enum)
 // ─────────────────────────────────────────────────────────────────────────────
-
-// SQLite does not support native enums — we use String with validation in code.
-// For PostgreSQL migration, replace String with enum types below.
-
-// Role: "ADMIN" | "EDITOR" | "VIEWER"
-// VerificationStatus: "VERIFIED" | "UNVERIFIED" | "ESTIMATED" | "NOT_DISCLOSED" | "SAMPLE"
-// EmergencyNgoStatus: "CONFIRMED_RESPONDING" | "OPERATING_NEARBY"
-// DisasterType: "FLOOD" | "EARTHQUAKE" | "CYCLONE" | "LANDSLIDE" | "FIRE" | "DROUGHT" | "OTHER"
-// CaseStatus: "DOCUMENTED" | "REPORTED_MEDIA" | "ILLUSTRATIVE"
-// EntityType: "PERSON" | "COMPANY" | "TRUST" | "FOUNDATION" | "NGO" | "PROJECT" | "REGION" | "UNKNOWN"
-// AuditAction: "CREATE" | "UPDATE" | "DELETE"
-// SourceClassification: "OFFICIAL_GOVT" | "PUBLIC_FILING" | "NGO_ANNUAL_REPORT" | "CSR_DISCLOSURE" | "FCRA_DISCLOSURE" | "AUDITED_STATEMENT" | "NGO_WEBSITE" | "VERIFIED_PUBLIC"
+// Role:                    "ADMIN" | "EDITOR" | "VIEWER"
+// VerificationStatus:      "VERIFIED" | "UNVERIFIED" | "ESTIMATED" | "NOT_DISCLOSED" | "SAMPLE"
+// NgoVerificationStatus:   "Verified" | "Unverified"
+// EmergencyNgoStatus:      "CONFIRMED_RESPONDING" | "OPERATING_NEARBY"
+// DisasterType:            "FLOOD" | "EARTHQUAKE" | "CYCLONE" | "LANDSLIDE" | "FIRE" | "DROUGHT" | "OTHER"
+// CaseStatus:              "DOCUMENTED" | "REPORTED_MEDIA" | "ILLUSTRATIVE"
+// EntityType:              "PERSON" | "COMPANY" | "TRUST" | "FOUNDATION" | "NGO" | "PROJECT" | "REGION" | "OTHER" | "UNKNOWN"
+// AuditAction:             "CREATE" | "UPDATE" | "DELETE"
+// DonationStatus:          "CREATED" | "PAID" | "FAILED" | "REFUNDED"
+// SourceClassification:    "Official government record" | "Public filing" | "NGO annual report"
+//                          | "CSR disclosure" | "Foreign contribution disclosure"
+//                          | "Audited financial statement" | "NGO website"
+//                          | "ETW platform record" | "Other verified public source"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ROVER MODULE
@@ -209,8 +210,8 @@ model Indicator {
   imfCode           String?           // IMF DataMapper indicator code
   whoCode           String?
   oecdCode          String?
-  isWealth          Boolean           @default(false) // Wealth indicators need manual data
-  hasManualData     Boolean           @default(false) // true = populated via CSV import
+  isWealth          Boolean           @default(false)
+  hasManualData     Boolean           @default(false)
   displayOrder      Int               @default(0)
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
@@ -259,8 +260,8 @@ model DataPoint {
   @@index([year])
   @@index([level])
   @@index([verificationStatus])
-  @@index([indicatorId, year]) // For map/choropleth queries
-  @@index([countryId, indicatorId]) // For country profiles
+  @@index([indicatorId, year])
+  @@index([countryId, indicatorId])
   @@index([placeId, level, indicatorId, year])
 }
 
@@ -303,109 +304,236 @@ model CompareSelection {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CONTRIBUTOR MODULE — REFERENCE DATA
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 36 Maharashtra districts with aliases and adjacency
+model District {
+  id           String   @id @default(cuid())
+  name         String   @unique // Canonical name
+  aliases      String   @default("[]") // JSON array of alternate spellings
+  adjacentTo   String   @default("[]") // JSON array of canonical district names
+  division     String?  // Revenue division
+  headquarters String?  // District headquarters city
+  createdAt    DateTime @default(now())
+
+  ngoDistricts NgoDistrict[]
+
+  @@index([name])
+}
+
+// NGO contribution categories (for Contributor module)
+model NgoCategory {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  slug         String   @unique
+  description  String?
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  ngoLinks     NgoNgoCategory[]
+
+  @@index([slug])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CONTRIBUTOR MODULE — NGOs
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Ngo {
-  id                 String             @id @default(cuid())
-  name               String
-  slug               String             @unique
-  registrationNumber String?
-  registrationType   String?            // "Trust" | "Society" | "Section 8" | "NGO Darpan" etc.
-  registrationDate   DateTime?
-  // District: one of 36 Maharashtra districts
-  district           String?
-  address            String?
-  city               String?
-  state              String             @default("Maharashtra")
-  pincode            String?
-  website            String?
-  publicEmail        String?
-  publicPhone        String?
-  // Category (comma-separated slugs or JSON)
-  categories         String?            // JSON array stored as string
-  areasOfWork        String?            // JSON array
-  // Directors/Trustees (public records only)
-  directorsPublic    String?            // JSON array
-  // Source info
-  ngoId              String?            // NITI Aayog Unique ID
-  fcraRegistration   String?
-  panNumber          String?
+  id                    String             @id @default(cuid())
+  name                  String
+  slug                  String             @unique
+  // Official IDs
+  darpanId              String?            // NITI Aayog / NGO Darpan Unique ID
+  registrationNumber    String?
+  registrationAuthority String?            // "Charity Commissioner" | "Registrar of Societies" | "RoC" etc.
+  registrationAct       String?            // "Bombay Public Trusts Act" | "Societies Registration Act" | etc.
+  registrationType      String?            // "Trust" | "Society" | "Section 8 Company" | "Other"
+  registrationDate      DateTime?
+
+  // Location
+  address               String?
+  city                  String?
+  state                 String             @default("Maharashtra")
+  pincode               String?
+  primaryDistrict       String?            // Canonical district name (denormalized for speed)
+  district              String?            // Canonical district name
+
+  // Public-facing info
+  website               String?
+  officialDonationUrl   String?            // Source-backed external donation page URL
+  categories            String?            // JSON array of category names or slugs for fast search/filtering
+  areasOfWork           String?            // JSON array of freetext areas
+
+  // Contacts (organization-level only — no personal phone/email)
+  orgContacts           String?            // JSON: [{type, value, sourceUrl}] — org email/phone only
+
+  // Key people (name+role+sourceUrl required per spec)
+  keyPeople             String?            // JSON: [{name, role, sourceUrl}]
+
+  // Financial transparency & Compliance
+  taxExemptionInfo      String?            // JSON: {has80G, has12A, sourceUrl} — only with source
+  tax80gStatus          String?            // "VERIFIED" | "EXPIRED" | "NOT ON RECORD"
+  tax12aStatus          String?            // "VERIFIED" | "EXPIRED" | "NOT ON RECORD"
+  fcraStatus            String?            // "VERIFIED" | "EXPIRED" | "NOT ON RECORD"
+  fcraRegistrationNumber String?
+
+  // Payment via ETW
+  paymentEnabled        Boolean            @default(false) // ADMIN-only; requires consent
+  consentDocumentUrl    String?            // URL to signed agreement
+  settlementMethod      String?            // "bank_transfer" | "razorpay_route"
+  accountRef            String?            // Encrypted account reference (never logged)
+
+  // Provenance
+  sourceName            String?
+  sourceUrl             String?
+  sourceClassification  String?            // See SourceClassification enum comment
+  retrievedAt           DateTime?
+  lastVerifiedAt        DateTime?
+  importBatchId         String?
+  importBatch           ImportBatch?       @relation(fields: [importBatchId], references: [id])
+
   // Status
-  isActive           Boolean            @default(true)
-  isSampleData       Boolean            @default(true)
-  verificationStatus String             @default("UNVERIFIED")
-  sourceUrl          String?
-  lastVerified       DateTime?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  isActive              Boolean            @default(true)
+  isSampleData          Boolean            @default(false) // MUST be false for real records
+  verificationStatus    String             @default("Unverified") // "Verified" | "Unverified"
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
 
-  financialYears     NgoFinancialYear[]
-  transactions       Transaction[]
-  emergencyMatches   EmergencyNgoMatch[]
+  // Relations
+  districts             NgoDistrict[]
+  categoryLinks         NgoNgoCategory[]
+  financialYears        NgoFinancialYear[]
+  transactions          Transaction[]
+  emergencyMatches      EmergencyNgoMatch[]
+  donations             Donation[]
 
+  @@index([primaryDistrict])
   @@index([district])
   @@index([registrationNumber])
+  @@index([darpanId])
   @@index([slug])
+  @@index([verificationStatus])
+  @@index([isSampleData])
+}
+
+// Many-to-many: Ngo ↔ District (an NGO can operate in multiple districts)
+model NgoDistrict {
+  id         String   @id @default(cuid())
+  ngoId      String
+  ngo        Ngo      @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  districtId String
+  district   District @relation(fields: [districtId], references: [id])
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@unique([ngoId, districtId])
+  @@index([ngoId])
+  @@index([districtId])
+}
+
+// Many-to-many: Ngo ↔ NgoCategory
+model NgoNgoCategory {
+  id         String      @id @default(cuid())
+  ngoId      String
+  ngo        Ngo         @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   NgoCategory @relation(fields: [categoryId], references: [id])
+  createdAt  DateTime    @default(now())
+
+  @@unique([ngoId, categoryId])
+  @@index([ngoId])
+  @@index([categoryId])
 }
 
 model NgoFinancialYear {
   id                   String   @id @default(cuid())
   ngoId                String
-  ngo                  Ngo      @relation(fields: [ngoId], references: [id])
+  ngo                  Ngo      @relation(fields: [ngoId], references: [id], onDelete: Cascade)
   financialYear        String   // e.g. "2022-23"
+
+  // All financial fields nullable — null = "Not publicly disclosed"
   totalIncome          Float?
   totalExpenditure     Float?
   donations            Float?
   grants               Float?
   csrFunding           Float?
-  governmentFunding    Float?
-  foreignContributions Float?   // FCRA
-  totalAssets          Float?
-  totalLiabilities     Float?
+  foreignContributions Float?   // FCRA total
+  foreignContribution  Float?
+  assets               Float?
+  liabilities          Float?
   adminExpenditure     Float?
+  administrativeExpenses Float?
   programExpenditure   Float?
-  // Source classification: see enum comment above
-  sourceClassification String?
+  programExpenses      Float?
+  governmentFunding    Float?
+  governmentGrants     Float?
+
+  // Provenance (required)
+  sourceName           String?
+  sourceUrl            String?
+  sourceClassification String?  // See SourceClassification enum comment
+  sourceFile           String?  // Filename of uploaded/downloaded document
+  pageReference        String?  // Page/section in source document
+  documentUrl          String?  // Direct link to the filing document
+  retrievedAt          DateTime?
+  lastVerifiedAt       DateTime?
+  importBatchId        String?
+  importBatch          ImportBatch? @relation(fields: [importBatchId], references: [id])
   sourceId             String?
   source               Source?  @relation(fields: [sourceId], references: [id])
-  sourceUrl            String?
-  documentUrl          String?  // Link to actual filing
-  verificationStatus   String   @default("UNVERIFIED")
-  isSampleData         Boolean  @default(true)
+
+  verificationStatus   String   @default("Unverified")
+  isSampleData         Boolean  @default(false)
   notes                String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
+  @@unique([ngoId, financialYear])
   @@index([ngoId])
   @@index([financialYear])
 }
 
 model Transaction {
-  id                   String          @id @default(cuid())
+  id                   String           @id @default(cuid())
   ngoId                String
-  ngo                  Ngo             @relation(fields: [ngoId], references: [id])
-  date                 DateTime?
-  financialYear        String?
+  ngo                  Ngo              @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  date                 DateTime?        // Actual date if known
+  financialYear        String?          // e.g. "2022-23"
+
+  // Parties (only publicly disclosed info)
   senderName           String?
-  senderType           String?         // "Government" | "Corporate" | "Individual" | "Foreign" | "NGO"
+  senderType           String?          // "Government" | "Corporate" | "Individual" | "Foreign" | "NGO"
   recipientName        String?
   recipientType        String?
-  amount               Float?
-  currency             String          @default("INR")
+
+  amount               Float?           // null if not publicly disclosed
+  currency             String           @default("INR")
   purpose              String?
-  transactionType      String?         // "Grant" | "Donation" | "CSR" | "FCRA" | "Government"
+  transactionType      String?          // "Grant" | "Donation" | "CSR" | "FCRA" | "Government"
+  isEstimate           Boolean          @default(false) // true = "Estimated" label
+
+  // Provenance (required — no sourceUrl = rejected on import)
+  sourceName           String
+  sourceUrl            String
   sourceClassification String?
+  sourceFile           String?
+  pageReference        String?
+  retrievedAt          DateTime?
+  lastVerifiedAt       DateTime?
+  importBatchId        String?
+  importBatch          ImportBatch?     @relation(fields: [importBatchId], references: [id])
   sourceId             String?
-  source               Source?         @relation(fields: [sourceId], references: [id])
-  sourceUrl            String?
+  source               Source?          @relation(fields: [sourceId], references: [id])
   evidenceDocumentId   String?
   evidenceDocument     EvidenceDocument? @relation(fields: [evidenceDocumentId], references: [id])
-  verificationStatus   String          @default("UNVERIFIED")
-  isSampleData         Boolean         @default(true)
+
+  verificationStatus   String           @default("Unverified")
+  isSampleData         Boolean          @default(false)
   notes                String?
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 
   @@index([ngoId])
   @@index([financialYear])
@@ -415,12 +543,13 @@ model Transaction {
 model EvidenceDocument {
   id            String        @id @default(cuid())
   title         String
-  documentType  String?       // "Annual Report" | "FCRA Return" | "CSR Filing" | "Court Order" | etc.
+  documentType  String?       // "Annual Report" | "FCRA Return" | "CSR Filing" | "Court Order" etc.
   url           String
   sourceOrg     String?
   publishedDate DateTime?
   retrievedDate DateTime?
-  isSampleData  Boolean       @default(true)
+  isSampleData  Boolean       @default(false)
+  verificationStatus String   @default("UNVERIFIED") // "VERIFIED" | "UNVERIFIED"
   createdAt     DateTime      @default(now())
 
   transactions  Transaction[]
@@ -429,56 +558,156 @@ model EvidenceDocument {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DATA PIPELINE
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ImportBatch {
+  id              String   @id @default(cuid())
+  source          String   // "DARPAN_BULK" | "DARPAN_SCRAPER" | "MANUAL_CSV" | "FCRA_CSV" | "CSR_CSV" | "MANUAL_FORM"
+  fileName        String?  // Original filename (if file-based)
+  totalRows       Int      @default(0)
+  acceptedRows    Int      @default(0)
+  rejectedRows    Int      @default(0)
+  duplicateRows   Int      @default(0)
+  validationReport String? // JSON array of {row, status, reasons}
+  status          String   @default("PENDING") // "PENDING" | "RUNNING" | "DONE" | "FAILED"
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  startedByUserId String?
+
+  ngos            Ngo[]
+  financials      NgoFinancialYear[]
+  transactions    Transaction[]
+
+  @@index([source])
+  @@index([status])
+  @@index([startedAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // EMERGENCY MODULE
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Emergency {
-  id             String             @id @default(cuid())
-  title          String             // e.g. "Flood — Kolhapur District"
+  id               String             @id @default(cuid())
+  title            String             // e.g. "Flood — Kolhapur District"
   // DisasterType: FLOOD | EARTHQUAKE | CYCLONE | LANDSLIDE | FIRE | DROUGHT | OTHER
-  disasterType   String
-  affectedDistricts String          // JSON array of district names
-  severity       String?            // "Low" | "Moderate" | "Severe" | "Extreme"
-  description    String?
-  reportedAt     DateTime
-  resolvedAt     DateTime?
-  isActive       Boolean            @default(true)
-  isSimulation   Boolean            @default(false) // Admin demo flag
-  sourceName     String
-  sourceUrl      String
-  rawAlertData   String?            // JSON of the original alert
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  createdBy      String?            // User id
+  disasterType     String
+  affectedDistricts String            // JSON array of canonical district names
+  severity         String?            // "Low" | "Moderate" | "Severe" | "Extreme"
+  description      String?
+  reportedAt       DateTime
+  resolvedAt       DateTime?
+  // PENDING_REVIEW → ACTIVE (admin approved) | REJECTED
+  reviewStatus     String             @default("PENDING_REVIEW")
+  isActive         Boolean            @default(false) // true only after ADMIN approves
+  isSimulation     Boolean            @default(false) // ENABLE_SIMULATION=true only
+  sourceName       String
+  sourceUrl        String
+  sourceEventId    String?            @unique // For deduplication
+  rawAlertData     String?            // JSON of the original alert
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  createdBy        String?            // User id
+  approvedBy       String?            // User id
+  approvedAt       DateTime?
 
-  ngoMatches     EmergencyNgoMatch[]
+  ngoMatches       EmergencyNgoMatch[]
 
   @@index([isActive])
+  @@index([reviewStatus])
   @@index([disasterType])
+  @@index([reportedAt])
 }
 
 model EmergencyNgoMatch {
-  id              String     @id @default(cuid())
-  emergencyId     String
-  emergency       Emergency  @relation(fields: [emergencyId], references: [id])
-  ngoId           String
-  ngo             Ngo        @relation(fields: [ngoId], references: [id])
+  id                String            @id @default(cuid())
+  emergencyId       String
+  emergency         Emergency         @relation(fields: [emergencyId], references: [id], onDelete: Cascade)
+  ngoId             String
+  ngo               Ngo               @relation(fields: [ngoId], references: [id], onDelete: Cascade)
   // Status: CONFIRMED_RESPONDING | OPERATING_NEARBY
-  // CONFIRMED_RESPONDING requires evidenceDocumentId to be set
-  status          String     @default("OPERATING_NEARBY")
-  matchReason     String?    // "district" | "neighbouring" | "relief_specialization" | "area_of_operation"
+  // CONFIRMED_RESPONDING requires evidenceUrl + evidenceDate
+  status            String            @default("OPERATING_NEARBY")
+  matchReason       String?           // "district" | "neighbouring" | "relief_specialization"
+  matchConfidence   String?           // "HIGH" | "MEDIUM" | "LOW"
   evidenceDocumentId String?
   evidenceDocument  EvidenceDocument? @relation(fields: [evidenceDocumentId], references: [id])
-  evidenceUrl     String?
-  evidenceDate    DateTime?
-  addedBy         String?    // User id
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  evidenceUrl       String?           // Required for CONFIRMED_RESPONDING
+  evidenceDate      DateTime?         // Required for CONFIRMED_RESPONDING
+  addedBy           String?           // User id
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   @@unique([emergencyId, ngoId])
   @@index([emergencyId])
   @@index([ngoId])
   @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAYMENTS (Razorpay, INR only)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Donation {
+  id               String    @id @default(cuid())
+  ngoId            String
+  ngo              Ngo       @relation(fields: [ngoId], references: [id])
+  // Status: CREATED → PAID | FAILED → REFUNDED
+  status           String    @default("CREATED")
+  amountPaise      Int       // Amount in paise (INR × 100) — avoids float precision issues
+  currency         String    @default("INR")
+  donorName        String?   // Null if anonymous
+  donorEmail       String?   // Null if anonymous — never exposed publicly
+  isAnonymous      Boolean   @default(false)
+  isTestMode       Boolean   @default(true) // True for test/dev; never shown publicly
+
+  // Razorpay references
+  razorpayOrderId   String?  @unique
+  razorpayPaymentId String?
+  razorpaySignature String?  // Stored for audit only
+
+  // Idempotency
+  idempotencyKey   String    @unique @default(cuid())
+
+  // Receipt
+  receiptUrl       String?
+  receiptNumber    String?
+  financialYear    String?   // e.g. "2024-25"
+
+  // Refund
+  refundedAt       DateTime?
+  refundedBy       String?   // Admin user id
+  refundReason     String?
+  razorpayRefundId String?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  webhookLogs      WebhookLog[]
+
+  @@index([ngoId])
+  @@index([status])
+  @@index([isTestMode])
+  @@index([razorpayOrderId])
+}
+
+model WebhookLog {
+  id              String    @id @default(cuid())
+  // x-razorpay-event-id for idempotency
+  razorpayEventId String?   @unique
+  eventType       String    // "payment.captured" | "payment.failed" | "refund.processed"
+  donationId      String?
+  donation        Donation? @relation(fields: [donationId], references: [id])
+  rawBody         String    // JSON-serialized raw body (for audit)
+  signatureValid  Boolean
+  processed       Boolean   @default(false)
+  processingError String?
+  receivedAt      DateTime  @default(now())
+
+  @@index([donationId])
+  @@index([eventType])
+  @@index([receivedAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -489,13 +718,13 @@ model Entity {
   id          String               @id @default(cuid())
   name        String
   slug        String               @unique
-  // EntityType: PERSON | COMPANY | TRUST | FOUNDATION | NGO | PROJECT | REGION | UNKNOWN
+  // EntityType: PERSON | COMPANY | TRUST | FOUNDATION | NGO | PROJECT | REGION | OTHER | UNKNOWN
   type        String
   location    String?
   jurisdiction String?
   description String?
   isPubliclyKnown Boolean         @default(false)
-  isSampleData    Boolean         @default(true)
+  isSampleData    Boolean         @default(false)
   sourceUrl   String?
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
@@ -515,7 +744,7 @@ model EntityRelationship {
   currency          String?  @default("INR")
   year              Int?
   description       String?
-  isVerified        Boolean  @default(false) // true = solid edge, false = dashed edge
+  isVerified        Boolean  @default(false)
   isGap             Boolean  @default(false) // true = "Not publicly traceable" node
   sourceUrl         String?
   evidenceNote      String?
@@ -536,12 +765,12 @@ model Case {
   subtitle             String?
   // CaseStatus: DOCUMENTED | REPORTED_MEDIA | ILLUSTRATIVE
   status               String               @default("ILLUSTRATIVE")
-  legalMechanism       String?              // e.g. "Cross-border holding company structure"
-  transparencyGap      String?              // Structural explanation
+  legalMechanism       String?
+  transparencyGap      String?
   whatIsKnown          String?              // JSON array of strings
   whatCannotBeEstablished String?           // JSON array of strings
   educationalDisclaimer String?
-  isSampleData         Boolean              @default(true)
+  isSampleData         Boolean              @default(false)
   publishedAt          DateTime?
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
@@ -632,10 +861,12 @@ model AuditLog {
   id         String   @id @default(cuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id])
-  action     String   // AuditAction: CREATE | UPDATE | DELETE
-  entityType String   // "Ngo" | "Transaction" | "Case" | "Emergency" | "User" | etc.
+  action     String   // CREATE | UPDATE | DELETE
+  entityType String   // "Ngo" | "Transaction" | "Case" | "Emergency" | "Donation" | etc.
   entityId   String
-  changes    String?  // JSON diff of what changed
+  before     String?  // JSON of state before change
+  after      String?  // JSON of state after change
+  changes    String?  // JSON diff summary
   ipAddress  String?
   userAgent  String?
   createdAt  DateTime @default(now())
@@ -647,16 +878,16 @@ model AuditLog {
 }
 
 model IngestionRun {
-  id           String   @id @default(cuid())
-  source       String   // "WorldBank" | "GDACS" | "ReliefWeb" | etc.
-  startedAt    DateTime @default(now())
-  completedAt  DateTime?
-  status       String   @default("RUNNING") // "RUNNING" | "SUCCESS" | "FAILED" | "PARTIAL"
-  recordsAdded Int      @default(0)
-  recordsUpdated Int    @default(0)
-  recordsSkipped Int    @default(0)
-  errors       String?  // JSON array of error messages
-  notes        String?
+  id             String   @id @default(cuid())
+  source         String   // "WorldBank" | "GDACS" | "USGS" | "DARPAN" | etc.
+  startedAt      DateTime @default(now())
+  completedAt    DateTime?
+  status         String   @default("RUNNING") // "RUNNING" | "SUCCESS" | "FAILED" | "PARTIAL"
+  recordsAdded   Int      @default(0)
+  recordsUpdated Int      @default(0)
+  recordsSkipped Int      @default(0)
+  errors         String?  // JSON array
+  notes          String?
 
   @@index([source])
   @@index([status])
@@ -668,12 +899,15 @@ model CorrectionRequest {
   name      String
   email     String
   message   String
+  entityType String? // "NGO" | "Transaction" | "Financial" etc.
+  entityId  String?
   status    String   @default("NEW") // "NEW" | "IN_REVIEW" | "RESOLVED" | "REJECTED"
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([status])
+  @@index([entityType])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -690,7 +924,7 @@ model Person {
   birthYear      Int?
   description    String?
   isSampleData   Boolean          @default(false)
-  isPublicFigure Boolean          @default(true)
+  isPublicFigure Boolean          @default(false)
   sourceUrl      String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -715,7 +949,7 @@ model PersonNetWorth {
   sourceUrl    String
   methodology  String?
   notes        String?
-  isSampleData Boolean  @default(true)
+  isSampleData Boolean  @default(false)
   createdAt    DateTime @default(now())
 
   @@index([personId])

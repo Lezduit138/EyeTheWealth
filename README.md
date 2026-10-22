@@ -4,91 +4,91 @@ ETW is a financial and socioeconomic transparency web platform. It aggregates pu
 
 ## Core Modules
 
-1. **ROVER**: Socioeconomic and wealth statistics across 8 countries. Data is fetched primarily from the World Bank API.
-2. **CONTRIBUTOR**: NGO directory for Maharashtra tracking public financial records and disaster response. Uses React Flow for fund-flow visualization.
+1. **ROVER**: Socioeconomic and wealth statistics across 217 countries / 41 indicators. Data is sourced from the World Bank API.
+2. **CONTRIBUTOR**: Maharashtra NGO directory tracking public financial records, fund-flow graphs, and disaster-response intelligence. Razorpay donations (INR).
 3. **DE BASEMENT**: Educational module on legal financial structures and transparency challenges.
 
 ## Technology Stack
 
 - **Framework**: Next.js (App Router) + TypeScript
-- **Styling**: Tailwind CSS (configured strictly to black and white palette in `globals.css`)
+- **Styling**: Tailwind CSS (strictly black/white WCAG AA palette in `globals.css`)
 - **Database**: Prisma ORM with SQLite (portable to PostgreSQL)
-- **Authentication**: Auth.js (NextAuth) for admin/editor access
-- **Visualizations**: Recharts (charts), React Flow (fund-flow diagrams)
-- **Data Fetching**: Axios, standard fetch for APIs.
+- **Authentication**: Auth.js (NextAuth v5) for admin/editor access
+- **Visualizations**: Recharts (charts), Dagre/React Flow (fund-flow diagrams), react-globe.gl (3D globe)
+- **Payments**: Razorpay (INR only, HMAC webhook verification)
 
-## Setup Instructions
+## Quick Setup
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+> **Full step-by-step guide (including AI-assistant-friendly instructions) is in [LOCAL_SETUP.md](./LOCAL_SETUP.md)**
 
-2. **Environment Variables:**
-   Copy `.env.example` to `.env` and fill in necessary keys (AUTH_SECRET, etc.).
-   ```bash
-   cp .env.example .env
-   ```
+```bash
+# 1. Install dependencies
+npm install
 
-3. **Database Setup:**
-   Run Prisma migrations to build the SQLite DB and seed it with baseline structures and sample data.
-   ```bash
-   npm run db:migrate
-   npm run db:seed
-   ```
-   *(Note: The seed script creates an admin user `admin@etw.local` with password `etw-admin-2026`)*
+# 2. Create environment file
+cp .env.example .env   # Windows: Copy-Item .env.example .env
+# Edit .env — set AUTH_SECRET to a random 32-char string
 
-4. **Data Ingestion (Rover):**
-   Fetch live data from the World Bank API to populate the socioeconomic indicators.
-   ```bash
-   npm run ingest:worldbank
-   ```
+# 3. Initialize DB schema
+npx prisma db push
+npx prisma generate
 
-5. **Run the Development Server:**
-   ```bash
-   npm run dev
-   ```
+# 4. Seed reference data (districts + categories)
+node scripts/seed-reference.cjs
+
+# 5. Seed Rover indicators
+npx ts-node scripts/migrate-indicators.ts
+
+# 6. Ingest World Bank data (217 countries)
+npx ts-node scripts/ingest-worldbank.ts
+
+# 7. Import real Maharashtra NGOs
+npx ts-node scripts/import-ngos-csv.ts --file=data/raw/real_maharashtra_ngos.csv
+
+# 8. Start dev server
+npm run dev
+```
+
+Open **http://localhost:3000**
 
 ## Architecture
 
-- **`app/`**: Next.js App Router. Contains pages, API routes, and layouts.
-  - `/rover`: Module 1
-  - `/contributor`: Module 2
-  - `/de-basement`: Module 3
-  - `/admin`: Protected admin dashboard
-  - `/api/v1`: REST API routes (rate limited, paginated)
-- **`components/`**: Reusable React components.
-  - `/layout`: Header, Footer
-  - `/ui`: Standard ETW styled components (Card, DataTable, FundFlow, SourcePanel, StatusBadge)
-  - `/rover`: Specific components like `IndicatorHistoryChart`
-- **`lib/`**: Utilities (prisma singleton, auth, standard api responses).
-- **`prisma/`**: Database schema (`schema.prisma`) and seeding logic (`seed.ts`).
-- **`scripts/`**: Background worker scripts (e.g., `ingest-worldbank.ts`).
+```
+app/
+  rover/          — Macro Monitor (Globe, Compare, Country profiles)
+  contributor/    — NGO Directory, profiles, Fund Flow, donations
+  de-basement/    — Educational content
+  admin/          — Protected admin dashboard (coverage, donations)
+  api/v1/         — REST API (rate-limited, paginated)
+components/
+  layout/         — Header, Footer
+  ui/             — ETW design-system components (Card, DataTable, StatusBadge…)
+  rover/          — Globe, IndicatorHistoryChart, ComparisonMatrix
+  contributor/    — NGO cards, FundFlowGraph, DonationModal
+lib/              — Prisma singleton, auth helpers, API response utils
+prisma/           — schema.prisma (SQLite → PostgreSQL portable)
+scripts/          — Data ingestion & seed scripts
+tests/            — Unit tests (20 tests; npm test)
+docs/             — ETW_RULES.md, architecture decisions
+```
 
-## Data Sources & Integrity
+## Data Integrity Policy
 
-- **Official Data First**: Every data point on the platform requires a cited source URL.
-- **World Bank API & IMF DataMapper**: Integrated via `npm run ingest:all`.
-- **Sample Data**: The seed script populates the database with some Sample NGOs and Illustrative De Basement cases for development purposes. These are flagged with specific status badges on the frontend.
+- **Zero fictional data**: No dummy/sample NGOs exist in Contributor. Test fixtures are strictly in `tests/`.
+- **Source-cited**: Every data point requires a cited source URL.
+- **Official data first**: World Bank API, NITI Aayog NGO Darpan IDs, official charity registrations.
+- Where data is unavailable, the UI shows "Not publicly disclosed" — never invented values.
 
-### Data I must supply manually
-Some wealth and index indicators do not have reliable free APIs. You must prepare a CSV file and run `npm run import:csv path/to/file.csv` to import them.
+## Verification
 
-The CSV must have these headers:
-`indicator_slug, country_code, year, value, unit, source_name, source_url, notes`
-
-**Indicators requiring manual CSV imports:**
-1. **Wealth per Adult (Median)** (slug: `wealth-per-adult`)
-   - **Source**: Credit Suisse Global Wealth Report / UBS Global Wealth Report
-   - **URL**: Provide the specific report URL for the year.
-2. **Human Development Index (HDI)** (slug: `hdi`)
-   - **Source**: UNDP Human Development Report
-   - **URL**: https://hdr.undp.org/data-center
-3. **People Net Worth Profiles**
-   - Individual profiles (net worth, companies) must be entered manually via Prisma Studio (`npm run db:studio`) or the Admin panel. Use Forbes or Bloomberg Billionaires Index.
+```bash
+npm test        # 20 unit tests (fund flow, payments HMAC, emergency, imports, RBAC)
+npm run lint    # ESLint — zero errors
+npm run build   # Next.js production build
+```
 
 ## Design System
-- Strictly monochrome: #FFF background, #000 text.
-- No gradients, shadows, or heavy animations. (Exception: The globe heatmap).
-- Font: Inter (from Google Fonts).
-- Components utilize thick borders, uppercase tracking, and stark contrasts to convey a robust, investigative feel.
+
+- Strictly monochrome: `#000` / `#FFF` — no colour gradients except the ROVER globe heatmap.
+- Font: Inter (Google Fonts).
+- Thick borders, uppercase tracking, stark contrasts — investigative, not decorative.

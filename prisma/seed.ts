@@ -427,63 +427,9 @@ async function main() {
   }
   console.log(`✓ ${interpretations.length} ETW interpretations created`);
 
-  // ─── Sample NGOs ───────────────────────────────────────────────────────────
-  // ALL clearly marked isSampleData: true — NEVER real data
-  const sampleNgos = [
-    {
-      name: "Sample Rural Health Foundation",
-      slug: "sample-rural-health-foundation",
-      district: "Nashik",
-      city: "Nashik",
-      categories: JSON.stringify(["Health", "Rural development"]),
-      areasOfWork: JSON.stringify(["Primary healthcare", "Maternal health", "Nutrition"]),
-      isActive: true,
-      isSampleData: true,
-      verificationStatus: "SAMPLE",
-    },
-    {
-      name: "Sample Education Trust Maharashtra",
-      slug: "sample-education-trust-maha",
-      district: "Pune",
-      city: "Pune",
-      categories: JSON.stringify(["Education", "Children"]),
-      areasOfWork: JSON.stringify(["School infrastructure", "Scholarship", "Teacher training"]),
-      isActive: true,
-      isSampleData: true,
-      verificationStatus: "SAMPLE",
-    },
-    {
-      name: "Sample Disaster Relief Network",
-      slug: "sample-disaster-relief-network",
-      district: "Kolhapur",
-      city: "Kolhapur",
-      categories: JSON.stringify(["Disaster relief", "Food"]),
-      areasOfWork: JSON.stringify(["Flood relief", "Emergency food distribution", "Shelter"]),
-      isActive: true,
-      isSampleData: true,
-      verificationStatus: "SAMPLE",
-    },
-    {
-      name: "Sample Women Empowerment Collective",
-      slug: "sample-women-empowerment-collective",
-      district: "Nagpur",
-      city: "Nagpur",
-      categories: JSON.stringify(["Women", "Poverty"]),
-      areasOfWork: JSON.stringify(["Microfinance", "Skill development", "Legal aid"]),
-      isActive: true,
-      isSampleData: true,
-      verificationStatus: "SAMPLE",
-    },
-  ];
-
-  for (const ngo of sampleNgos) {
-    await prisma.ngo.upsert({
-      where: { slug: ngo.slug },
-      create: ngo,
-      update: { isSampleData: true },
-    });
-  }
-  console.log(`✓ ${sampleNgos.length} SAMPLE NGOs created (clearly labelled as not real)`);
+  // ─── Zero Sample NGOs ──────────────────────────────────────────────────────────
+  // Per ETW_RULES: ZERO sample/invented NGOs in Contributor. Test fixtures live in tests only.
+  console.log("ℹ Skipping sample NGOs (ETW zero-dummy-data policy)");
 
   // ─── De Basement — Illustrative Cases (FICTIONAL) ─────────────────────────
   // ALL fictional entities, ALL labelled ILLUSTRATIVE. No real people or companies.

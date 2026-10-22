@@ -22,7 +22,7 @@ export interface SyncResult {
   adapterResults: Array<{ adapter: string; events: number; errors: string[] }>;
 }
 
-async function matchNgos(emergencyId: string, affectedDistricts: string[], _disasterType: string) {
+async function matchNgos(emergencyId: string, affectedDistricts: string[]) {
   const neighbours = getNeighbouringDistricts(affectedDistricts);
 
   // Tier 1: NGOs in affected districts
@@ -147,7 +147,7 @@ export async function runEmergencySync(): Promise<SyncResult> {
       }
     });
 
-    await matchNgos(emergency.id, affectedDistrictNames, event.disasterType);
+    await matchNgos(emergency.id, affectedDistrictNames);
     result.newEmergencies++;
   }
 

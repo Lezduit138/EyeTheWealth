@@ -1,21 +1,9 @@
-#!/usr/bin/env ts-node
-// ETW — Import NGOs from CSV
-// Usage: npx ts-node scripts/import-ngos-csv.ts --file=path/to/ngos.csv [--dry-run]
-//
-// REQUIRED columns (exact header names):
-//   name, district, registrationType, registrationNumber
-//
-// OPTIONAL columns:
-//   slug, registrationDate (YYYY-MM-DD), city, state, address, pincode,
-//   website, publicEmail, publicPhone, categories (pipe-separated e.g. "Health|Education"),
-//   areasOfWork (pipe-separated), ngoId, fcraRegistration, panNumber, sourceUrl
-//
-// Rules:
-//   - Idempotent: matched on registrationNumber (if present) or name+district combo
-//   - Never overwrites verified records with unverified data
-//   - sourceUrl is REQUIRED (row rejected if missing)
-//   - isSampleData is set to false for all imported records
-//   - verificationStatus defaults to "UNVERIFIED"; only ADMIN can set "VERIFIED"
+/**
+ * ETW — Real NGO CSV Importer (Layer 1 Directory)
+ * Reads CSV of real NGOs, validates required fields, normalizes districts and categories,
+ * drops personal phone/email per privacy rules, and idempotently upserts to DB.
+ * Usage: npx ts-node --compiler-options "{\"module\":\"CommonJS\"}" scripts/import-ngos-csv.ts --file=data/raw/real_maharashtra_ngos.csv [--dry-run]
+ */
 
 import fs from "fs";
 import path from "path";
@@ -37,13 +25,33 @@ const VALID_DISTRICTS = [
   "Washim", "Yavatmal"
 ];
 
+// District alias mapping
+const DISTRICT_ALIASES: Record<string, string> = {
+  "ahilyanagar": "Ahmednagar",
+  "nagar": "Ahmednagar",
+  "chhatrapati sambhajinagar": "Aurangabad",
+  "sambhajinagar": "Aurangabad",
+  "dharashiv": "Osmanabad",
+  "bid": "Beed",
+  "mumbai": "Mumbai City",
+  "bombay": "Mumbai City",
+};
+
+function normalizeDistrict(raw: string | undefined | null): string | null {
+  if (!raw) return null;
+  const clean = raw.trim();
+  if (VALID_DISTRICTS.includes(clean)) return clean;
+  const lower = clean.toLowerCase();
+  if (DISTRICT_ALIASES[lower]) return DISTRICT_ALIASES[lower];
+  return clean;
+}
+
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
 function parseRow(headers: string[], row: string): Record<string, string> {
   const result: Record<string, string> = {};
-  // Handle quoted CSV values
   const values: string[] = [];
   let current = "";
   let inQuotes = false;
@@ -101,7 +109,7 @@ async function main() {
   }
 
   const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, ""));
-  const REQUIRED = ["name", "district", "registrationType", "registrationNumber"];
+  const REQUIRED = ["name", "district", "registrationType"];
   const missingHeaders = REQUIRED.filter(r => !headers.includes(r));
   
   if (missingHeaders.length > 0) {
@@ -122,7 +130,6 @@ async function main() {
     const rowNum = i + 1;
     const row = parseRow(headers, lines[i]);
 
-    // Validate required fields
     if (!row.name?.trim()) {
       rejected.push({ row: rowNum, data: row, reason: "Missing required field: name" });
       continue;
@@ -135,7 +142,9 @@ async function main() {
       rejected.push({ row: rowNum, data: row, reason: "Missing required field: sourceUrl (all records must cite a public source)" });
       continue;
     }
-    if (row.district && !VALID_DISTRICTS.includes(row.district)) {
+
+    const normalizedDistrict = normalizeDistrict(row.district);
+    if (normalizedDistrict && !VALID_DISTRICTS.includes(normalizedDistrict)) {
       rejected.push({ row: rowNum, data: row, reason: `Invalid district: "${row.district}". Must be one of the 36 Maharashtra districts.` });
       continue;
     }
@@ -143,7 +152,7 @@ async function main() {
     // Validate and parse categories
     let parsedCategories: string[] = [];
     if (row.categories) {
-      const cats = row.categories.split("|").map(c => c.trim());
+      const cats = row.categories.split("|").map(c => c.trim()).filter(Boolean);
       const invalidCats = cats.filter(c => !VALID_CATEGORIES.includes(c));
       if (invalidCats.length > 0) {
         rejected.push({ row: rowNum, data: row, reason: `Invalid categories: ${invalidCats.join(", ")}. Valid: ${VALID_CATEGORIES.join(", ")}` });
@@ -157,32 +166,36 @@ async function main() {
       ? row.areasOfWork.split("|").map(a => a.trim()).filter(Boolean)
       : [];
 
-    // Generate slug
     const baseSlug = row.slug?.trim() || slugify(row.name);
-    
+    const regNumber = row.registrationNumber?.trim() || null;
+    const darpanId = row.darpanId?.trim() || row.ngoId?.trim() || null;
+
     const data = {
       name: row.name.trim(),
       slug: baseSlug,
-      district: row.district?.trim() || null,
+      district: normalizedDistrict,
+      primaryDistrict: normalizedDistrict,
       registrationType: row.registrationType.trim(),
-      registrationNumber: row.registrationNumber?.trim() || null,
+      registrationNumber: regNumber,
+      registrationAuthority: row.registrationAuthority?.trim() || "Charity Commissioner",
+      registrationAct: row.registrationAct?.trim() || "Bombay Public Trusts Act, 1950",
       registrationDate: row.registrationDate ? new Date(row.registrationDate) : null,
+      darpanId: darpanId,
       city: row.city?.trim() || null,
       state: row.state?.trim() || "Maharashtra",
       address: row.address?.trim() || null,
       pincode: row.pincode?.trim() || null,
       website: row.website?.trim() || null,
-      publicEmail: row.publicEmail?.trim() || null,
-      publicPhone: row.publicPhone?.trim() || null,
+      officialDonationUrl: row.officialDonationUrl?.trim() || null,
       categories: parsedCategories.length > 0 ? JSON.stringify(parsedCategories) : null,
       areasOfWork: parsedAreasOfWork.length > 0 ? JSON.stringify(parsedAreasOfWork) : null,
-      ngoId: row.ngoId?.trim() || null,
-      fcraRegistration: row.fcraRegistration?.trim() || null,
-      panNumber: row.panNumber?.trim() || null,
+      sourceName: row.sourceName?.trim() || "NITI Aayog NGO Darpan / Official Public Filing",
       sourceUrl: row.sourceUrl.trim(),
+      sourceClassification: "Official government record",
+      retrievedAt: new Date(),
       isSampleData: false,
       isActive: true,
-      verificationStatus: "UNVERIFIED",
+      verificationStatus: "Unverified",
     };
 
     if (dryRun) {
@@ -191,34 +204,29 @@ async function main() {
     }
 
     try {
-      // Upsert: match on registrationNumber if present, else name+district
-      const existingByRegNum = row.registrationNumber?.trim()
-        ? await prisma.ngo.findFirst({ where: { registrationNumber: row.registrationNumber.trim() } })
-        : null;
-      
-      const existingBySlug = await prisma.ngo.findUnique({ where: { slug: baseSlug } });
+      // Upsert logic: match darpanId, then registrationNumber, then slug
+      let existing = null;
+      if (darpanId) {
+        existing = await prisma.ngo.findFirst({ where: { darpanId } });
+      }
+      if (!existing && regNumber) {
+        existing = await prisma.ngo.findFirst({ where: { registrationNumber: regNumber } });
+      }
+      if (!existing) {
+        existing = await prisma.ngo.findUnique({ where: { slug: baseSlug } });
+      }
 
-      if (existingByRegNum) {
-        // Never downgrade a VERIFIED record
-        if (existingByRegNum.verificationStatus === "VERIFIED") {
+      if (existing) {
+        if (existing.verificationStatus === "Verified") {
           rejected.push({
             row: rowNum,
             data: row,
-            reason: `SKIPPED — existing record is VERIFIED and cannot be overwritten by CSV import. Use admin panel to update.`
+            reason: "SKIPPED — existing record is VERIFIED and cannot be overwritten by bulk import."
           });
           continue;
         }
-        await prisma.ngo.update({ where: { id: existingByRegNum.id }, data });
+        await prisma.ngo.update({ where: { id: existing.id }, data });
         accepted.push({ row: rowNum, name: data.name, status: "UPDATED" });
-      } else if (existingBySlug) {
-        // Slug collision — append district suffix
-        const uniqueSlug = `${baseSlug}-${(row.district || "mh").toLowerCase().replace(/\s+/g, "-")}`;
-        await prisma.ngo.upsert({
-          where: { slug: uniqueSlug },
-          create: { ...data, slug: uniqueSlug },
-          update: data,
-        });
-        accepted.push({ row: rowNum, name: data.name, status: "CREATED", reason: `Slug collision resolved: ${uniqueSlug}` });
       } else {
         await prisma.ngo.create({ data });
         accepted.push({ row: rowNum, name: data.name, status: "CREATED" });
@@ -229,44 +237,23 @@ async function main() {
     }
   }
 
-  // Print report
   console.log("═══════════════════════════════════════════════════════════");
   console.log(`  VALIDATION REPORT — ${dryRun ? "DRY RUN" : "LIVE"}`);
   console.log("═══════════════════════════════════════════════════════════");
-  console.log(`  ✅ Accepted: ${accepted.length}`);
-  console.log(`  ❌ Rejected: ${rejected.length}`);
-  console.log("");
-
-  if (accepted.length > 0) {
-    console.log("  ACCEPTED ROWS:");
-    accepted.forEach(r => {
-      console.log(`    Row ${r.row}: [${r.status}] ${r.name}${r.reason ? " — " + r.reason : ""}`);
-    });
-  }
+  console.log(`  Total rows:    ${lines.length - 1}`);
+  console.log(`  Accepted:      ${accepted.length} (${accepted.filter(a => a.status === "CREATED").length} new, ${accepted.filter(a => a.status === "UPDATED").length} updated)`);
+  console.log(`  Rejected:      ${rejected.length}`);
 
   if (rejected.length > 0) {
-    console.log("\n  REJECTED ROWS:");
+    console.log("\n❌ REJECTED ROWS:");
     rejected.forEach(r => {
-      console.log(`    Row ${r.row}: ${r.reason}`);
-      console.log(`           Data: ${JSON.stringify(r.data).substring(0, 120)}...`);
+      console.log(`  [Row ${r.row}] "${r.data.name || "UNKNOWN"}": ${r.reason}`);
     });
   }
 
-  console.log("\n═══════════════════════════════════════════════════════════");
-  console.log("  CSV TEMPLATE (copy into your spreadsheet tool):");
-  console.log("  name,district,registrationType,registrationNumber,registrationDate,city,state,address,pincode,website,publicEmail,publicPhone,categories,areasOfWork,ngoId,fcraRegistration,panNumber,sourceUrl");
-  console.log("  EXAMPLE ROW:");
-  console.log("  \"Maharashtra Flood Relief Trust\",\"Kolhapur\",\"Trust\",\"MAH-TR-12345\",\"2010-03-01\",\"Kolhapur\",\"Maharashtra\",\"123 Main Road\",\"416001\",\"https://example.org\",\"\",\"\",\"Disaster relief|Health\",\"Flood relief|Medical aid\",\"MH-NGO-001\",\"\",\"\",\"https://fcraonline.nic.in/...\"");
-  console.log("═══════════════════════════════════════════════════════════\n");
-  
-  if (!dryRun && accepted.length > 0) {
-    console.log(`✅ ${accepted.length} NGO records imported. Sample data is preserved alongside real records; use the admin panel to deactivate sample entries once real data is confirmed.\n`);
-  }
+  console.log("\n✅ NGO Import complete.");
 }
 
 main()
-  .catch(e => {
-    console.error("❌ Import failed:", e);
-    process.exit(1);
-  })
+  .catch(e => { console.error("❌ Fatal error:", e.message); process.exit(1); })
   .finally(() => prisma.$disconnect());
