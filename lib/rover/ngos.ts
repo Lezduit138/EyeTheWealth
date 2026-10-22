@@ -6,7 +6,7 @@
 // 4. Financial transparency badge indicates official audited statements or "Not publicly disclosed".
 // 5. Must display mandatory label: "Operating in area — does not confirm it is addressing this need".
 
-import { prisma } from "../prisma";
+import { prisma } from "../prisma.ts";
 
 export const CATEGORY_DIMENSION_MAP: Record<string, string[]> = {
   "Education": ["Education", "Literacy", "Child Welfare"],
@@ -38,7 +38,7 @@ export async function getSuggestedNgosForPlace(
   placeName: string,
   stateName: string | null,
   districtName: string | null,
-  weakDimensions: string[] = []
+  _weakDimensions: string[] = []
 ): Promise<NgoSuggestionResult> {
   const disclaimer = "Operating in area — does not confirm it is addressing this need.";
 

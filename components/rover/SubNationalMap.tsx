@@ -52,9 +52,9 @@ export default function SubNationalMap({
   /* ── Fetch child places ─────────────────────────────────────────────── */
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
 
     async function load() {
+      if (!cancelled) setLoading(true);
       try {
         const url = parentPlaceId
           ? `/api/v1/rover/places?parent=${encodeURIComponent(parentPlaceId)}`
@@ -73,7 +73,7 @@ export default function SubNationalMap({
           }
         }
       } catch (e) {
-        console.error("[SubNationalMap] fetch error", e);
+        if (!cancelled) console.error("[SubNationalMap] fetch error", e);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -103,7 +103,6 @@ export default function SubNationalMap({
       if (unmounted || !mapContainer.current) return;
 
       // Fix Leaflet default-icon broken in webpack/Next.js builds
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -157,7 +156,7 @@ export default function SubNationalMap({
     const map = leafletMap.current;
     if (!map) return;
     const { center, zoom } = getView();
-    try { map.flyTo(center, zoom, { duration: 1.0 }); } catch (_) { /* unmounted */ }
+    try { map.flyTo(center, zoom, { duration: 1.0 }); } catch { /* unmounted */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePlace, level]);
 

@@ -72,23 +72,27 @@ export default function AreaPanel({ placeId, placeSlug, placeName, placeLevel, o
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    Promise.all([
-      fetch(`/api/v1/rover/assets?slug=${encodeURIComponent(placeSlug)}`).then(r => r.json()),
-      fetch(`/api/v1/rover/deprivation?slug=${encodeURIComponent(placeSlug)}`).then(r => r.json()),
-      fetch(`/api/v1/rover/factors?slug=${encodeURIComponent(placeSlug)}`).then(r => r.json()),
-      fetch(`/api/v1/rover/ngos?slug=${encodeURIComponent(placeSlug)}`).then(r => r.json()),
-      fetch(`/api/v1/rover/individuals?slug=${encodeURIComponent(placeSlug)}`).then(r => r.json()),
-    ]).then(([a, d, f, n, i]) => {
-      if (cancelled) return;
-      if (a.success) setAssetsData(a.data);
-      if (d.success) setDeprivData(d.data);
-      if (f.success) setFactorsData(f.data);
-      if (n.success) setNgosData(n.data);
-      if (i.success) setIndivData(i.data);
-    }).catch(err => console.error("[AreaPanel] fetch error", err))
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    const controller = new AbortController();
+    function load() {
+      if (!cancelled) setLoading(true);
+      Promise.all([
+        fetch(`/api/v1/rover/assets?slug=${encodeURIComponent(placeSlug)}`, { signal: controller.signal }).then(r => r.json()),
+        fetch(`/api/v1/rover/deprivation?slug=${encodeURIComponent(placeSlug)}`, { signal: controller.signal }).then(r => r.json()),
+        fetch(`/api/v1/rover/factors?slug=${encodeURIComponent(placeSlug)}`, { signal: controller.signal }).then(r => r.json()),
+        fetch(`/api/v1/rover/ngos?slug=${encodeURIComponent(placeSlug)}`, { signal: controller.signal }).then(r => r.json()),
+        fetch(`/api/v1/rover/individuals?slug=${encodeURIComponent(placeSlug)}`, { signal: controller.signal }).then(r => r.json()),
+      ]).then(([a, d, f, n, i]) => {
+        if (cancelled) return;
+        if (a.success) setAssetsData(a.data);
+        if (d.success) setDeprivData(d.data);
+        if (f.success) setFactorsData(f.data);
+        if (n.success) setNgosData(n.data);
+        if (i.success) setIndivData(i.data);
+      }).catch(err => { if (!cancelled) console.error("[AreaPanel] fetch error", err); })
+        .finally(() => { if (!cancelled) setLoading(false); });
+    }
+    load();
+    return () => { cancelled = true; controller.abort(); };
   }, [placeSlug]);
 
   return (
@@ -179,7 +183,7 @@ export default function AreaPanel({ placeId, placeSlug, placeName, placeLevel, o
                     <Info size={12} /> ETW Data Integrity Rule
                   </div>
                   <p style={{ fontSize: 11, color: "#555", lineHeight: 1.6, margin: 0 }}>
-                    National/state-level aggregates (e.g. gold reserves, GSDP) are only shown at their <strong>officially published measurement level</strong>. If a statistic is not published for this level, it is labelled <em>"Not publicly disclosed"</em>. ETW never apportions or downscales.
+                    National/state-level aggregates (e.g. gold reserves, GSDP) are only shown at their <strong>officially published measurement level</strong>. If a statistic is not published for this level, it is labelled <em>&quot;Not publicly disclosed&quot;</em>. ETW never apportions or downscales.
                   </p>
                 </div>
               </div>
