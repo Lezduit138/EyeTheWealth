@@ -161,8 +161,8 @@ export default function ClientDashboard({ categories }: { categories: any[] }) {
       </div>
 
       {/* CENTER: Globe & Timeline */}
-      <div className="flex-grow relative flex flex-col bg-white">
-        <div className="flex-grow relative w-full h-full cursor-move">
+      <div className="flex-1 min-w-0 min-h-0 relative flex flex-col bg-white h-full">
+        <div className="flex-1 min-h-[480px] relative w-full h-full cursor-move flex flex-col">
           <Globe 
             mapData={mapData} 
             selectedCountryCode={selectedCountry}
@@ -170,8 +170,10 @@ export default function ClientDashboard({ categories }: { categories: any[] }) {
           />
           {renderLegend()}
           {loadingMap && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-50 z-10">
-              <div className="font-mono text-sm border border-black px-4 py-2 bg-white">Loading data...</div>
+            <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10 pointer-events-none">
+              <div className="font-mono text-xs font-bold border-2 border-black px-4 py-2 bg-white shadow-[2px_2px_0px_0px_#000]">
+                UPDATING MAP DATA...
+              </div>
             </div>
           )}
         </div>
