@@ -12,13 +12,17 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams;
   const parentId = searchParams.get("parent");
-  const level = searchParams.get("level");
-  const search = searchParams.get("q")?.trim();
+  const level    = searchParams.get("level");
+  const slug     = searchParams.get("slug")?.trim();
+  const search   = searchParams.get("q")?.trim();
 
   try {
     const whereClause: Record<string, unknown> = {};
 
-    if (parentId) {
+    if (slug) {
+      // Exact slug lookup — used by ClientDashboard to resolve India place ID
+      whereClause.slug = slug;
+    } else if (parentId) {
       whereClause.parentId = parentId;
     } else if (level) {
       whereClause.level = level;

@@ -72,13 +72,25 @@ export default function ClientDashboard({ categories }: { categories: any[] }) {
   }, [searchQuery]);
 
   // Country Selection from 3D Globe
-  const handleCountryClick = (code: string) => {
+  const handleCountryClick = async (code: string) => {
     setSelectedCountry(code);
     if (code === "IND") {
-      // Transition to Sub-National India level
-      setCurrentLevel("state");
-      setActivePlace({ id: "cmv46wpmt0007ijk781e7v3h3", slug: "india", name: "India", level: "country" });
-      setBreadcrumbs([{ id: "cmv46wpmt0007ijk781e7v3h3", slug: "india", name: "India", level: "country" }]);
+      // Look up the real India Place record by slug — ID is DB-generated and varies per machine
+      try {
+        const res = await fetch("/api/v1/rover/places?slug=india");
+        const data = await res.json();
+        const indiaPlace = data.success && data.data?.places?.length > 0
+          ? data.data.places[0]
+          : { id: "india", slug: "india", name: "India", level: "country" };
+        setCurrentLevel("state");
+        setActivePlace(indiaPlace);
+        setBreadcrumbs([indiaPlace]);
+      } catch {
+        const fallback = { id: "india", slug: "india", name: "India", level: "country" };
+        setCurrentLevel("state");
+        setActivePlace(fallback);
+        setBreadcrumbs([fallback]);
+      }
     }
   };
 
